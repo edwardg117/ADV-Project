@@ -1,3 +1,4 @@
+// Ignore this file for now
 function init(event)
 {
     // Start timer

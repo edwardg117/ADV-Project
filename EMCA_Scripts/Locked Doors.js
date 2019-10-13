@@ -1,4 +1,5 @@
 /*
+I don't think this works anymore
 Locked Doors Script v1.1 by edwardg
 Copy the lines below into the Door's script and configure to your liking, this script allows doors to be lockpicked.
 It can be made so that the door can never be picked or can never get jammed.

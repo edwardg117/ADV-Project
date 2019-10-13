@@ -1,3 +1,6 @@
+/*
+Witcher 3 style horse summoning by edwardg
+*/
 function init(event)
 {
     event.npc.addTag("npcHorse") // needed for teleporting and identifying this horse in minecraft
