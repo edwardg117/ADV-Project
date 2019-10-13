@@ -1,5 +1,10 @@
 /*
 Witcher 3 style horse summoning by edwardg
+#Incomplete#
+To do:
+- A way to add the horse without player chat event
+- A way to detect horse death and null the saved uuid
+- Add check to see if the player currently owns a horse
 */
 function init(event)
 {
@@ -41,7 +46,7 @@ function tick(event)
         horse.addRider(navigator)
     }
 
-    if(event.message == "-horse2") // Player summons their horse
+    if(event.message == "-horse") // Player summons their horse
     {
         event.API.executeCommand(event.player.world, "execute @p ~ ~ ~ spreadplayers ~ ~ 10 20 false @e[tag=npcHorse]")
         event.API.executeCommand(event.player.world, "tp @e[tag=playerHorse] @e[tag=npcHorse]")
