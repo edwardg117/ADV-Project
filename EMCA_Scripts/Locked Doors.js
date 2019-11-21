@@ -1,6 +1,5 @@
 /*
-I don't think this works anymore
-Locked Doors Script v1.1 by edwardg
+Locked Doors Script v2 by edwardg
 Copy the lines below into the Door's script and configure to your liking, this script allows doors to be lockpicked.
 It can be made so that the door can never be picked or can never get jammed.
 This is a modification of a vanilla pickable doors I made that uses the two skills (lockpick and luck) to determine a successfull attempt.
@@ -10,16 +9,16 @@ var pickable = 1 // Can the door be lockpicked (1 = true, 0 = false)
 var jammed = 0 // Is the lock jammed (1 = true, 0 = false, -1 for un-jammable)
 var diff = "Normal" // Dificulty (1 = VeryEasy, 3 = Easy, 5 = Normal, 7 = Hard, 10 = VeryHard)
 var doorType = "wooden_door" // The type of door (wooden_door, iron_door, spruce_door, birch_door, jungle_door, acacia_door, dark_oak_door)
+
 // Only edit the following if you want a key
 // You should use scoreboard if you want to simulate a "keychain" that doesn't take up space in a players inventory.
-var keyID = "" // ("" for no key, "minecraft:tripwire_hook" or any other item and 1 for a scoreboard objective)
-var keyName = "" // Name of key or scoreboard objective, must be a string. ("Item Key" or "scoreboard_obj)
-var keyLore = [""] // Only use if the key item has lore ["Lore line 1", "Lore line 2", "Lore Line 3"]
-// Note that when checking the lore lines can be in any order and will be accepted as long as the desired lines are present
+var keyID = 0 // (0 for no key, 1 for item NBT tag and 2 for a scoreboard objective)
+var keyName = "" // Item NBT or scoreboard objective, must be a string. ("isSpecificDoorKey" or "scoreboard_obj")
+
 // Only edit this if you want custom lockpicks
-var lockpickID = "minecraft:tripwire_hook" // ("minecraft:tripwire_hook" or any other item and 1 for a scoreboard objective)
-var lockpickName = "Lockpick" // Name of item or scoreboard objective, must be a string. (same as keyName)
-var lockpickLore = ["Used for opening locked doors."] // Only use if the lockpick item has lore ["Lore line 1", "Lore line 2", "Lore Line 3"]
+var lockpickID = 1 // (1 for item with NBT and 2 for a scoreboard objective)
+var lockpickName = "isLockpick" // Item NBT tag or scoreboard objective, must be a string. (same as keyName)
+
 var scoreboardLockpick = "skillLockpick" // The name of the scoreboard objective that holds the player's lockpick skill
 var scoreboardLuck = "skillLuck" // The name of the scoreboard objective that holds the player's luck skill/stat
 */
@@ -57,37 +56,27 @@ function init(event)
     event.block.getStoreddata().put("isLocked", isLocked)
     event.block.getStoreddata().put("pickable", pickable)
     event.block.getStoreddata().put("jammed", jammed)
+
     if(diff == "VeryEasy"){event.block.getStoreddata().put("diff", 1)}
     if(diff == "Easy"){event.block.getStoreddata().put("diff", 3)}
     if(diff == "Normal"){event.block.getStoreddata().put("diff", 5)}
     if(diff == "Hard"){event.block.getStoreddata().put("diff", 7)}
     if(diff == "VeryHard"){event.block.getStoreddata().put("diff", 10)}
-    if(keyID != "")
-    {
-        if(typeof(keyID) == typeof("String"))
-        {
-            event.block.getStoreddata().put("keyType", 1)
-        }
-        else if(keyID == 1)
-        {
-            event.block.getStoreddata().put("keyType", 2)
-            event.block.getStoreddata().put("scoreboardObjective", keyName)
-        }   
-    }
-    else
-    {
-        event.block.getStoreddata().put("keyType", 0)
-    }
+    
+    
+    
+    event.block.getStoreddata().put("keyType", keyID)
+    event.block.getStoreddata().put("keyName", keyName)
+        
     event.block.world.broadcast("Key type: " + event.block.getStoreddata().get("keyType"))
-    if(typeof(lockpickID) == typeof("string"))
-    {
-        event.block.getStoreddata().put("pickType", 1)
-    }
-    else
-    {
-        event.block.getStoreddata().put("pickType", 2)
-        event.block.getStoreddata().put("pickObjective", lockpickName)
-    }
+
+
+
+    event.block.getStoreddata().put("pickType", lockpickID)
+    event.block.getStoreddata().put("lockpickName", lockpickName)
+
+
+
     event.block.getStoreddata().put("skillLockpick", scoreboardLockpick)
     event.block.getStoreddata().put("skillLuck", scoreboardLuck)
     event.block.getStoreddata().put("posX", event.block.getPos().getX())
@@ -113,15 +102,7 @@ function interact(event)
                 // Figure out what key we are looking for
                 if(keyType == 1)
                 {   // This type is a Key Item (physical item in inventory)
-                    // #### build a reference key ####
-                    keyItem = event.block.world.createItem(keyID, 0, 1)
-                    keyItem.setCustomName(keyName)
-                    if(keyLore != "")
-                    {
-                        keyItem.setLore(keyLore)
-                    }
-
-                    hasKey = hasItem(event, event.player, keyItem) // Check for specific item
+                    hasKey = hasItem(event.player, event.block.getStoreddata().get("keyName")) // Check for specific item
                     if(hasKey)
                     {
                         event.block.getStoreddata().put("isLocked", 0)
@@ -135,9 +116,9 @@ function interact(event)
                 }
                 else if(keyType == 2)
                 {   // This type is Scoreboard Objective
-                    scoreboardObjective = event.block.getStoreddata().get("scoreboardObjective")
+                    keyName = event.block.getStoreddata().get("keyName")
                     var player = event.player.name
-                    scoreBoard = event.player.world.scoreboard.getObjective(scoreboardObjective).getScore(player).getValue()
+                    scoreBoard = event.player.world.scoreboard.getObjective(keyName).getScore(player).getValue()
                     if(scoreBoard)
                     {   // Has the key
                         event.block.getStoreddata().put("isLocked", 0)
@@ -153,32 +134,31 @@ function interact(event)
             }
             else
             {   // There is no key for this door, can it be picked
-                pickable = event.block.getStoreddata().get("pickable")
+                var pickable = event.block.getStoreddata().get("pickable")
             }
+
+
             if(pickable && isLocked)
             {
                 // Door is locked, can be picked
                 var jammed = event.block.getStoreddata().get("jammed")
                 var player = event.player.name
-                skillLockpick = event.player.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(player).getValue()
-                skillLuck = event.player.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLuck")).getScore(player).getValue()
+                var skillLockpick = event.player.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(player).getValue()
+                var skillLuck = event.player.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLuck")).getScore(player).getValue()
             
                 if((!jammed) || (jammed == -1)) // Door is locked, can be picked and is not jammed
                 {
                     if(skillLockpick > 0) // You have to know how to pick locks first
                     {
                         // Now we need to find out if the player has lockpicks, MC command: testfor @p {Inventory:[{tag:{display:{Name:"Lockpick",Lore:["Used for opening locked doors."]}}}]}
-                        pickType = event.block.getStoreddata().get("pickType")
+                        var pickType = event.block.getStoreddata().get("pickType")
                         if(pickType == 1)
                         {
-                            lockpick = event.player.world.createItem(lockpickID, 0, 1) // Crearte an item to test against the players inventory
-                            lockpick.setCustomName(lockpickName)
-                            lockpick.setLore(lockpickLore)
-                            hasLockpicks = hasItem(event, event.player, lockpick) // Check for lockpicks in players inventory
+                            var hasLockpicks = hasItem(event.player, event.block.getStoreddata().get("lockpickName")) // Check for lockpicks in players inventory
                         }
                         else if(pickType == 2)
                         {
-                            hasLockpicks = event.player.world.scoreboard.getObjective(event.block.getStoreddata().get("pickObjective")).getScore(player).getValue()
+                            var hasLockpicks = event.player.world.scoreboard.getObjective(event.block.getStoreddata().get("lockpickName")).getScore(player).getValue()
                             if(hasLockpicks < 0)
                             {
                                 hasLockpicks = 0
@@ -188,8 +168,8 @@ function interact(event)
                         // Player has lockpicks
                         if(hasLockpicks)
                         {
-                            pickTime = maxPickTime
-                            runPickTimeOnce = 1
+                            pickTime = maxPickTime // These must be global, rip 20mins of my life
+                            //runPickTimeOnce = 1
                             event.block.timers.forceStart(2, 1, false) // begin picking the lock
                             event.setCanceled(true)
 
@@ -257,8 +237,8 @@ function timer(event)
 {
     if(event.id == 1 && event.block.getStoreddata().get("isLocked") && pickTime == -10) // Present chance of success
     {
-        skillLockpick = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(lastInteract.name).getValue()
-        diff = event.block.getStoreddata().get("diff")
+        var skillLockpick = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(lastInteract.name).getValue()
+        var diff = event.block.getStoreddata().get("diff")
 
         if(skillLockpick - diff >= 0)
         {
@@ -286,20 +266,20 @@ function timer(event)
     {
         if(pickTime > 0)
         {
-            result = 0
-            playerName = lastInteract.getDisplayName()
-            skillLockpick = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(lastInteract.name).getValue()
-            skillLuck = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLuck")).getScore(lastInteract.name).getValue()
-            posX = event.block.getStoreddata().get("posX")
-            posY = event.block.getStoreddata().get("posY")
-            posZ = event.block.getStoreddata().get("posZ")
+            var result = 0
+            var playerName = lastInteract.getDisplayName()
+            var skillLockpick = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(lastInteract.name).getValue()
+            var skillLuck = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLuck")).getScore(lastInteract.name).getValue()
+            var posX = event.block.getStoreddata().get("posX")
+            var posY = event.block.getStoreddata().get("posY")
+            var posZ = event.block.getStoreddata().get("posZ")
             // Ensure player is still standing next to the door
-            output = event.API.executeCommand(lastInteract.world, 'testfor @p[name='+ playerName + ',x=' + posX +',y=' + posY + ',z=' + posZ + ',r=3]')
+            var output = event.API.executeCommand(lastInteract.world, 'testfor @p[name='+ playerName + ',x=' + posX +',y=' + posY + ',z=' + posZ + ',r=3]')
             if(output.indexOf("Found " + playerName) > -1){result = 1}
 
             if(lastInteract.isSneaking() && result) // If standing next to door sneaking
             {
-                pickPercentage = Math.floor(((20 - pickTime) / 20) * 100) // Display how far along in picking it is
+                var pickPercentage = Math.floor(((20 - pickTime) / 20) * 100) // Display how far along in picking it is
                 if(pickPercentage > 100){pickPercentage = 100} // If for some reason it's above 100%, fix it
                 event.API.executeCommand(event.block.world, "title " + playerName + ' actionbar ["",{"text":"Picking Lock...(","color":"black"},{"text":"' + pickPercentage + '%' + '","color":"yellow"},{"text":")","color":"black"}]')
                 pickTime = pickTime - skillLockpick // Decrease lockpick time by skill
@@ -313,7 +293,7 @@ function timer(event)
         else if(pickTime <= 0 && pickTime > -10) // This will only run once 
         {
             // Pick a random value between the difficulty level and 2 values below
-            randDiff = randInt(diff-2,diff)
+            var randDiff = randInt(diff-2,diff)
             if(skillLockpick >= randDiff) // The player has met of exceeded the difficulty requirement
             {
                 event.API.executeCommand(event.block.world, "title " + playerName + ' actionbar ["",{"text":"Success!","color":"green"}]')
@@ -321,7 +301,7 @@ function timer(event)
             }
             else // Player has failed the difficulty check
             {
-                randLuck = randInt(0, 10) // Pick a number between 0 and 10 to compare against player's luck
+                var randLuck = randInt(0, 10) // Pick a number between 0 and 10 to compare against player's luck
                 if(skillLuck > randLuck)
                 {   // Player has high enough luck for a regular failure
                     event.API.executeCommand(event.block.world, "title " + playerName + ' actionbar ["",{"text":"Failure!","color":"dark_red"}]')
@@ -398,14 +378,13 @@ function timer(event)
                 else
                 {
                     // Critical fail
-                    pickType = event.block.getStoreddata().get("pickType")
+                    var pickType = event.block.getStoreddata().get("pickType")
+                    var lockpickName = event.block.getStoreddata().get("lockpickName")
+                    var playerName = lastInteract.getDisplayName()
                     if(pickType == 1)
                     {
                         event.API.executeCommand(event.block.world, "title " + playerName + ' actionbar ["",{"text":"Critical Failure!","color":"dark_red"}]')
-                        lockpick = lastInteract.world.createItem(lockpickID, 0, 1) // Crearte an item to test against the players inventory
-                        lockpick.setCustomName(lockpickName)
-                        lockpick.setLore(lockpickLore)
-                        tags = itemMetaToString(lockpick)
+                        var lockpick = getItemMatchingNbtTag(lastInteract, lockpickName)
                     }
                     var critFail = randInt(-1,10)
                     if(critFail < 5)
@@ -413,8 +392,12 @@ function timer(event)
                         // Lose Lockpick
                         // title @a actionbar {"text":"Your lockpick breaks!","color":"dark_red"}
                         event.API.executeCommand(event.block.world, "title " + playerName + ' actionbar ["",{"text":"Your lockpick breaks!","color":"dark_red"}]')
-                        if(pickType == 1){event.API.executeCommand(event.block.world, 'clear ' + playerName + ' ' + lockpickID + ' 0 1 ' + tags)}
-                        else if(pickType == 2){event.API.executeCommand(event.block.world, 'scoreboard players remove ' + playerName + ' ' + event.block.getStoreddata().get("pickObjective") + ' 1')}
+                        if(pickType == 1){lastInteract.removeItem(lockpick, 1)}
+                        else if(pickType == 2)
+                        {
+                            score = lastInteract.world.scoreboard.getObjective(lockpickName).getScore(playerName).getValue()
+                            lastInteract.world.scoreboard.getObjective(lockpickName).getScore(playerName).setValue(score - 1)
+                        }
                     }
                     else if(critFail == 5)
                     {
@@ -423,15 +406,23 @@ function timer(event)
                         if(event.block.getStoreddata().get("jammed") != -1)
                         {
                             event.API.executeCommand(event.block.world, "title " + playerName + ' actionbar ["",{"text":"The lock jams!","color":"dark_red"}]')
-                            if(pickType == 1){event.API.executeCommand(event.block.world, 'clear ' + playerName + ' ' + lockpickID + ' 0 1 ' + tags)}
-                            else if(pickType == 2){event.API.executeCommand(event.block.world, 'scoreboard players remove ' + playerName + ' ' + event.block.getStoreddata().get("pickObjective") + ' 1')}
+                            if(pickType == 1){lastInteract.removeItem(lockpick, 1)}
+                            else if(pickType == 2)
+                            {
+                                score = lastInteract.world.scoreboard.getObjective(lockpickName).getScore(playerName).getValue()
+                                lastInteract.world.scoreboard.getObjective(lockpickName).getScore(playerName).setValue(score - 1)
+                            }
                             event.block.getStoreddata().put("jammed", 1)
                         }
                         else
                         {
                             event.API.executeCommand(event.block.world, "title " + playerName + ' actionbar ["",{"text":"Your lockpick breaks!","color":"dark_red"}]')
-                            if(pickType == 1){event.API.executeCommand(event.block.world, 'clear ' + playerName + ' ' + lockpickID + ' 0 1 ' + tags)}
-                            else if(pickType == 2){event.API.executeCommand(event.block.world, 'scoreboard players remove ' + playerName + ' ' + event.block.getStoreddata().get("pickObjective") + ' 1')}
+                            if(pickType == 1){lastInteract.removeItem(lockpick, 1)}
+                            else if(pickType == 2)
+                            {
+                                score = lastInteract.world.scoreboard.getObjective(lockPickName).getScore(playerName).getValue()
+                                lastInteract.world.scoreboard.getObjective(lockPickName).getScore(playerName).setValue(score - 1)
+                            }
                         }
                     }
                     else // critFail < 5
@@ -452,7 +443,7 @@ function timer(event)
         if(pickTime > 0)
         {
             playerName = lastInteract.getDisplayName()
-            result = 0
+            var result = 0
             posX = event.block.getStoreddata().get("posX")
             posY = event.block.getStoreddata().get("posY")
             posZ = event.block.getStoreddata().get("posZ")
@@ -478,113 +469,48 @@ function timer(event)
     }
 }
 
-function hasItem(event, player, item)
+function hasItem(player, key)
 {
-    // This function is intended to replace the inventoryItemCount method in searching for a specific named item (Note: unlike inventoryItemCount it only returns true or false)
-    itemString = item.getItemNbt().toJsonString()
-    playerName = player.getDisplayName()
-    var result = 0
+    var check = 0 // Value for seeing if they have the item in the end
+    var i = 0
+    var inventory = player.getInventory().getItems() // Returns a list of items in player inventory
+    //player.world.broadcast("Inv: " + inventory.length)
 
-    if(itemString.indexOf('Name:') > -1){itemName = 'Name:"' + item.getDisplayName() + '"'}
-    else{itemName = ""}
+    while(i < inventory.length) // For each item, check for the NBT tag key (a string value held in key variable)
+    {
+        //player.world.broadcast("Checking: " + inventory[i].getName())
+        if(inventory[i].getNbt().has(key))
+        {
+            check = 1
+            break // Only intersted in seeing that they have it, could count but meh
+        }
+        i++
+    }
+    //player.world.broadcast("Has Pick: " + check)
 
-    // Find the lore section in the JSON string
-    index = itemString.indexOf('"Lore":')
-    var str = ""
-    if(index > -1)
-    {
-        for(i = index + 8; i < itemString.length - 1; i++) // Starting just after Lore, grab every character for processing
-        {
-            if(itemString[i] != "\n" && itemString[i] != " ") // New lines and a binch of spaces are included that break the search and need to be filtered out
-            {
-                if(itemString[i] == '"') // If a quotation is found stop ignoring spaces
-                {
-                    do
-                    {
-                        str = str + itemString[i]
-                        i++
-                    }
-                    while(itemString[i] != '"') // After we reach the end of the string for the line of lore go back to normal
-                    str = str + itemString[i] // If we don't grab this now it will be lost and screw up the formatting
-                }
-                else // Commas are rather important to grab too
-                {
-                    str = str + itemString[i]
-                }
-            }
-            if(itemString[i] == "]"){i = itemString.length} // People seem to get upset when I use a break, so I'm going out of my way to upset everyone here
-        }
-        if(itemName == "") // Check if the item name is different
-        {
-            str = 'Lore:' + str
-        }
-        else
-        {
-            str = ',Lore:' + str
-        }
-    }
-    // Command block output will be "Found playerX" or "playerX did not match the required data structure"
-    if(itemName != "" || str != "")
-    {
-    output = event.API.executeCommand(event.player.world, 'testfor '+ playerName + ' {Inventory:[{id:"' + item.getName() + '",tag:{display:{' + itemName + str + '}}}]}')
-    }
-    else
-    {
-        output = event.API.executeCommand(event.player.world, 'testfor '+ playerName + ' {Inventory:[{id:"' + item.getName() + '"}]}')
-    }
-    if(output.indexOf("Found " + playerName) > -1){result = 1}
-    return result
+    return check
 }
 
-function itemMetaToString(item)
+function getItemMatchingNbtTag(player, key)
 {
-    itemString = item.getItemNbt().toJsonString()
-    index = itemString.indexOf('"Lore":')
-    var str = ""
-    if(itemString.indexOf('Name:') > -1){itemName = 'Name:"' + item.getDisplayName() + '"'}
-    else{itemName = ""}
+    //Get item
+    var nbt = null
+    var i = 0
+    var inventory = player.getInventory().getItems() // Returns a list of items in player inventory
+    //player.world.broadcast("Inv: " + inventory.length)
 
-    if(index > -1)
+    while(i < inventory.length) // For each item, check for the NBT tag key (a string value held in key variable)
     {
-        for(i = index + 8; i < itemString.length - 1; i++) // Starting just after Lore, grab every character for processing
+        //player.world.broadcast("Checking: " + inventory[i].getName())
+        if(inventory[i].getNbt().has(key))
         {
-            if(itemString[i] != "\n" && itemString[i] != " ") // New lines and a binch of spaces are included that break the search and need to be filtered out
-            {
-                if(itemString[i] == '"') // If a quotation is found stop ignoring spaces
-                {
-                    do
-                    {
-                        str = str + itemString[i]
-                        i++
-                    }
-                    while(itemString[i] != '"') // After we reach the end of the string for the line of lore go back to normal
-                    str = str + itemString[i] // If we don't grab this now it will be lost and screw up the formatting
-                }
-                else // Commas are rather important to grab too
-                {
-                    str = str + itemString[i]
-                }
-            }
-            if(itemString[i] == "]"){i = itemString.length} // People seem to get upset when I use a break, so I'm going out of my way to upset everyone here
+            //nbt = inventory[i].getNbt()
+            break
         }
-        if(itemName == "") // Check if the item name is different
-        {
-            str = 'Lore:' + str
-        }
-        else
-        {
-            str = ',Lore:' + str
-        }
+        i++
     }
-    //{display:{Name:"Lockpick",Lore:["Used for opening locked doors."]}}
-    if(itemName != "" || str != "")
-    {
-        result = '{display:{' + itemName + str + '}}'
-    }
-    else
-    {
-        result = ""
-    }
+    //player.world.broadcast("Has Pick: " + check)
     
-    return result
+    //return player.world.createItemFromNbt(nbt)
+    return inventory[i]
 }
