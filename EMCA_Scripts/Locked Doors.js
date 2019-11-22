@@ -1,5 +1,5 @@
 /*
-Locked Doors Script v2 by edwardg
+Locked Doors Script v2.2 by edwardg
 Copy the lines below into the Door's script and configure to your liking, this script allows doors to be lockpicked.
 It can be made so that the door can never be picked or can never get jammed.
 This is a modification of a vanilla pickable doors I made that uses the two skills (lockpick and luck) to determine a successfull attempt.
@@ -13,7 +13,7 @@ var doorType = "wooden_door" // The type of door (wooden_door, iron_door, spruce
 // Only edit the following if you want a key
 // You should use scoreboard if you want to simulate a "keychain" that doesn't take up space in a players inventory.
 var keyID = 0 // (0 for no key, 1 for item NBT tag and 2 for a scoreboard objective)
-var keyName = "" // Item NBT or scoreboard objective, must be a string. ("isSpecificDoorKey" or "scoreboard_obj")
+var keyName = "" // Item NBT tag or scoreboard objective, must be a string. ("isSpecificDoorKey" or "scoreboard_obj")
 
 // Only edit this if you want custom lockpicks
 var lockpickID = 1 // (1 for item with NBT and 2 for a scoreboard objective)
@@ -93,16 +93,16 @@ function interact(event)
     {
         // The door is locked, can it be picked?
         var isSneaking = event.player.isSneaking()
+        var keyType = event.block.getStoreddata().get("keyType")
         if(isSneaking)
         {
             // Check if player has the key for this door
-            var keyType = event.block.getStoreddata().get("keyType")
             if(keyType)
             {
                 // Figure out what key we are looking for
                 if(keyType == 1)
                 {   // This type is a Key Item (physical item in inventory)
-                    hasKey = hasItem(event.player, event.block.getStoreddata().get("keyName")) // Check for specific item
+                    var hasKey = hasItem(event.player, event.block.getStoreddata().get("keyName")) // Check if player has key
                     if(hasKey)
                     {
                         event.block.getStoreddata().put("isLocked", 0)
@@ -116,9 +116,9 @@ function interact(event)
                 }
                 else if(keyType == 2)
                 {   // This type is Scoreboard Objective
-                    keyName = event.block.getStoreddata().get("keyName")
+                    var keyName = event.block.getStoreddata().get("keyName")
                     var player = event.player.name
-                    scoreBoard = event.player.world.scoreboard.getObjective(keyName).getScore(player).getValue()
+                    var scoreBoard = event.player.world.scoreboard.getObjective(keyName).getScore(player).getValue()
                     if(scoreBoard)
                     {   // Has the key
                         event.block.getStoreddata().put("isLocked", 0)
@@ -201,10 +201,8 @@ function interact(event)
             else if(isLocked)
             {
                 event.API.executeCommand(event.block.world, "title " + event.player.getDisplayName() + ' actionbar ["",{"text":"This door cannot be picked","color":"black"}]')
-                posX = event.block.getPos().getX()
-                posY = event.block.getPos().getY()
-                posZ = event.block.getPos().getZ()
-                event.API.executeCommand(event.block.world, "playsound doors.locked block @a " + posX + " " + posY + " " + posZ)
+                var pos = event.block.getPos()
+                event.block.world.playSoundAt(pos, "doors.locked", 1, 1)
                 event.setCanceled(true)
             }
         }
@@ -218,7 +216,31 @@ function interact(event)
         else
         {
             event.API.executeCommand(event.block.world, "title " + event.player.getDisplayName() + ' actionbar ["",{"text":"This door is locked","color":"black"}]')
-            if(event.block.getStoreddata().get("pickable") && (event.player.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(event.player.name).getValue() > 0)) // Only display lockpick chance if it can actually be picked
+            var hasKey = 0
+            if(keyType)
+            {
+                if(keyType == 1)
+                {
+                    hasKey = hasItem(event.player, event.block.getStoreddata().get("keyName")) // Check if player has key
+                    if(hasKey){event.API.executeCommand(event.block.world, "title " + event.player.getDisplayName() + ' actionbar ["",{"text":"You have the key to this door","color":"black"}]')}
+                }
+                else if(keyType == 2)
+                {
+                    keyName = event.block.getStoreddata().get("keyName")
+                    var player = event.player.name
+                    var scoreBoard = event.player.world.scoreboard.getObjective(keyName).getScore(player).getValue()
+                    if(scoreBoard)
+                    {
+                        event.API.executeCommand(event.block.world, "title " + event.player.getDisplayName() + ' actionbar ["",{"text":"You have the key to this door","color":"black"}]')
+                        hasKey = 1
+                    }
+                }
+                else
+                {
+                    event.block.world.broadcast("This door has an invalid keyID, should be in range 0-2 but is " + keyType)
+                }
+            }
+            if(event.block.getStoreddata().get("pickable") && (event.player.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(event.player.name).getValue() > 0) && !hasKey) // Only display lockpick chance if it can actually be picked
             {   // Wait a bit before presenting the lockpick chance
                 event.block.timers.forceStart(1, 30, false)
             }
@@ -264,12 +286,13 @@ function timer(event)
 
     if(event.id == 2) // Used for making lockpicking take time
     {
+        var playerName = lastInteract.getDisplayName()
+        var skillLockpick = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(lastInteract.name).getValue()
+        var skillLuck = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLuck")).getScore(lastInteract.name).getValue()
+        var diff = event.block.getStoreddata().get("diff")
         if(pickTime > 0)
         {
             var result = 0
-            var playerName = lastInteract.getDisplayName()
-            var skillLockpick = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLockpick")).getScore(lastInteract.name).getValue()
-            var skillLuck = lastInteract.world.scoreboard.getObjective(event.block.getStoreddata().get("skillLuck")).getScore(lastInteract.name).getValue()
             var posX = event.block.getStoreddata().get("posX")
             var posY = event.block.getStoreddata().get("posY")
             var posZ = event.block.getStoreddata().get("posZ")
@@ -294,14 +317,14 @@ function timer(event)
         {
             // Pick a random value between the difficulty level and 2 values below
             var randDiff = randInt(diff-2,diff)
-            if(skillLockpick >= randDiff) // The player has met of exceeded the difficulty requirement
+            if(skillLockpick >= randDiff) // The player has met or exceeded the difficulty requirement
             {
                 event.API.executeCommand(event.block.world, "title " + playerName + ' actionbar ["",{"text":"Success!","color":"green"}]')
                 event.block.getStoreddata().put("isLocked", 0)
             }
             else // Player has failed the difficulty check
             {
-                var randLuck = randInt(0, 10) // Pick a number between 0 and 10 to compare against player's luck
+                var randLuck = randInt(0, 2) // Pick a number between 0 and 10 to compare against player's luck
                 if(skillLuck > randLuck)
                 {   // Player has high enough luck for a regular failure
                     event.API.executeCommand(event.block.world, "title " + playerName + ' actionbar ["",{"text":"Failure!","color":"dark_red"}]')
