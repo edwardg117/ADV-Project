@@ -1,5 +1,5 @@
 /*
-Roads aplpha 1 by edwardg
+Roads aplpha 2 by edwardg
 Uses jsonified by ratquaza (baito), https://github.com/ratquaza/jsonified
 
 In this version:
@@ -57,7 +57,7 @@ function init(event)
     var aboutMe = {}
     //event.block.world.broadcast(JSON.stringify(aboutMe))
     event.block.setIsPassible(true)
-    //event.block.setModel("minecraft:barrier")
+    event.block.setModel("minecraft:barrier")
     
     // Node Type
     event.block.getStoreddata().put("Type", type)
@@ -210,4 +210,42 @@ function getDistancetoNeighbour(Node, neighbourName)
         Node.world.broadcast("Node Registry does not exist, please create 1 node before declaring it a neighbour")
     }
     return distance
+}
+
+function collide(event)
+{
+    if(event.entity.getType() == 2)
+    {
+        var myName = event.block.getStoreddata().get("Name")
+        event.entity.getStoreddata().put("CurrentLocation", myName)
+        //event.block.world.broadcast("Is nav?: " + String(event.entity.getStoreddata().get("isNavigating")))
+        if(event.entity.getStoreddata().get("isNavigating"))
+        {
+            // Entity is currently using roads
+            if(event.entity.getStoreddata().get("NavTo") != myName)
+            {
+                var spiderClass = Java.type("org.baito.forge.jsonified.Spider")
+                var spider = new spiderClass()
+                spider.in("CNPCsRoads")
+                var nodeRegistry = JSON.parse(spider.get("NodeRegistry.json"))
+                var navPath = JSON.parse(event.entity.getStoreddata().get("navPath"))
+                //event.block.world.broadcast("navPath in Scripted Block: " + JSON.stringify(navPath)) // This is where the NPC has forgotten?
+                // var myNeighbours = nodeRegistry[myName]["Neighbours"]
+                var meInNavPath = navPath.indexOf(myName)
+                //event.block.world.broadcast("meInNavPath: " + String(meInNavPath))
+                var nextNode = navPath[meInNavPath + 1]
+                //event.block.world.broadcast("nextNode: " + nextNode)
+                var nextNodePos = nodeRegistry[nextNode]["Pos"]
+                //event.block.world.broadcast("nextNodePos: " + JSON.stringify(nextNodePos))
+                //event.block.world.broadcast("isNavigating1?: " + String(event.entity.isNavigating()))
+                //event.block.world.broadcast("navigationPath1: " + String(event.entity.getNavigationPath().getX()))
+                event.entity.navigateTo(nextNodePos[0], nextNodePos[1], nextNodePos[2], event.entity.getStoreddata().get("NavSpeed"))
+                //event.entity.clearNavigation()
+                //event.entity.navigateTo(1384,56,-650, event.entity.getStoreddata().get("Speed"))
+                //event.block.world.broadcast("isNavigating2?: " + String(event.entity.isNavigating()))
+                //event.block.world.broadcast("navigationPath2: " + String(event.entity.getNavigationPath().getX()))
+            }
+        }
+        //event.entity.world.broadcast("He touch!")
+    }
 }
