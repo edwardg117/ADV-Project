@@ -32,6 +32,9 @@ Planned
 - Interface for NPCs to use so they can make use of it
 - Ensure that the block can only be destroyed by a player in creative mode and no other means
 
+Type 0 = Start/End
+Type 1 = Nav
+
 Put into Scripted Block:
 var type = 0 // Type of Node
 var name = "TestNode" // Name of Node
@@ -69,6 +72,13 @@ function init(event)
     aboutMe["Pos"] = [pos.getX(),pos.getY(),pos.getZ()]
     
     // Node Name
+    if(event.block.getStoreddata().get("Name"))
+    {
+        if(event.block.getStoreddata().get("Name") != name)
+        {
+            broken(event)
+        }
+    }
     event.block.getStoreddata().put("Name", name)
     aboutMe["Name"] = name
 
@@ -97,20 +107,24 @@ function init(event)
     // Create spider to crawl though files for us ### Thanks to baito for making this possible
     var spider = new spiderClass()
     spider.in("CNPCsRoads")
+    //spider.in(event.block.world.getName())
 
     // Save our object
-    if(spider.exists("NodeRegistry.json")) // If Node Registry already exists, simply try to add new node if new
+    if(spider.exists(event.block.world.getName() + "_NodeRegistry.json")) // If Node Registry already exists, simply try to add new node if new
     {
-        var nodeRegistry = JSON.parse(spider.get("NodeRegistry.json"))
+        var nodeRegistry = JSON.parse(spider.get(event.block.world.getName() + "_NodeRegistry.json"))
         // Check to see if the node has already been created under that name
         if(aboutMe["Name"] in nodeRegistry)
         {
             if(JSON.stringify(aboutMe["Pos"]) == JSON.stringify(nodeRegistry[aboutMe["Name"]]["Pos"]))
             {
-                event.block.world.broadcast("Updating Node...")
+                if(aboutMe["Type"] != (nodeRegistry[aboutMe["Name"]]["Type"]) || aboutMe["City"] != nodeRegistry[aboutMe["Name"]]["City"] || JSON.stringify(aboutMe["Neighbours"]) != JSON.stringify(nodeRegistry[aboutMe["Name"]]["Neighbours"]))
+                {
+                    event.block.world.broadcast("Updating Node... " + name)
                 // ## Update Code here ##
                 nodeRegistry[aboutMe["Name"]] = aboutMe
-                spider.create("NodeRegistry.json", 1, JSON.stringify(nodeRegistry))
+                spider.create(event.block.world.getName() + "_NodeRegistry.json", 1, JSON.stringify(nodeRegistry))
+                }
             }
             else
             {
@@ -124,13 +138,13 @@ function init(event)
             event.block.world.broadcast("Adding New Node to Registry...")
             // ## Update Code here ##
             nodeRegistry[aboutMe["Name"]] = aboutMe
-            spider.create("NodeRegistry.json", 1, JSON.stringify(nodeRegistry))
+            spider.create(event.block.world.getName() + "_NodeRegistry.json", 1, JSON.stringify(nodeRegistry))
         }
     }
     else
     {
         event.block.world.broadcast("Couldn't find Node Registry, creating it!")
-        spider.create("NodeRegistry.json", 1, JSON.stringify(finalAboutMe))
+        spider.create(event.block.world.getName() + "_NodeRegistry.json", 1, JSON.stringify(finalAboutMe))
 
     }
     
@@ -160,12 +174,11 @@ function broken(event) // Player destroys scripted block
     var aboutMe = {}
     var pos = event.block.getPos()
     aboutMe["Pos"] = [pos.getX(),pos.getY(),pos.getZ()]
-    aboutMe["Name"] = name
-    // Save our object
-    if(spider.exists("NodeRegistry.json")) // Does the Node Registry exist yet?
+    aboutMe["Name"] = event.block.getStoreddata().get("Name")
+    
+    if(spider.exists(event.block.world.getName() + "_NodeRegistry.json")) // Does the Node Registry exist yet?
     {
-        var nodeRegistry = JSON.parse(spider.get("NodeRegistry.json"))
-
+        var nodeRegistry = JSON.parse(spider.get(event.block.world.getName() + "_NodeRegistry.json"))
         // Check to see if the node name is in the registry
         if(aboutMe["Name"] in nodeRegistry)
         {
@@ -173,8 +186,8 @@ function broken(event) // Player destroys scripted block
             {
                 // If yes to all, then the node exists in the Node Registry and must be removed
                 delete nodeRegistry[aboutMe["Name"]] // Remove from memory
-                spider.create("NodeRegistry.json", 1, JSON.stringify(nodeRegistry)) // Save to file
-                event.block.world.broadcast("Node Removed from Node Registry, name freed")
+                spider.create(event.block.world.getName() + "_NodeRegistry.json", 1, JSON.stringify(nodeRegistry)) // Save to file
+                event.block.world.broadcast("Node Removed from Node Registry, name freed: " + aboutMe["Name"])
             }
         }
     }
@@ -187,9 +200,9 @@ function getDistancetoNeighbour(Node, neighbourName)
     var spider = new spiderClass()
     spider.in("CNPCsRoads")
     var NodePos = Node.getPos()
-    if(spider.exists("NodeRegistry.json")) // Does the Node Registry exist yet?
+    if(spider.exists(Node.world.getName() + "_NodeRegistry.json")) // Does the Node Registry exist yet?
     {
-        var nodeRegistry = JSON.parse(spider.get("NodeRegistry.json"))
+        var nodeRegistry = JSON.parse(spider.get(Node.world.getName() + "_NodeRegistry.json"))
 
         // Check to see if the node name is in the registry
         if(neighbourName in nodeRegistry)
@@ -217,29 +230,39 @@ function collide(event)
     if(event.entity.getType() == 2)
     {
         var myName = event.block.getStoreddata().get("Name")
-        event.entity.getStoreddata().put("CurrentLocation", myName)
+        //event.entity.getStoreddata().put("CurrentLocation", myName) ### Testing to see if moving this to after the nav check is viable
         //event.block.world.broadcast("Is nav?: " + String(event.entity.getStoreddata().get("isNavigating")))
         if(event.entity.getStoreddata().get("isNavigating"))
         {
             // Entity is currently using roads
+            event.entity.getStoreddata().put("CurrentLocation", myName)
             if(event.entity.getStoreddata().get("NavTo") != myName)
             {
                 var spiderClass = Java.type("org.baito.forge.jsonified.Spider")
                 var spider = new spiderClass()
                 spider.in("CNPCsRoads")
-                var nodeRegistry = JSON.parse(spider.get("NodeRegistry.json"))
+                var nodeRegistry = JSON.parse(spider.get(event.block.world.getName() + "_NodeRegistry.json"))
                 var navPath = JSON.parse(event.entity.getStoreddata().get("navPath"))
                 //event.block.world.broadcast("navPath in Scripted Block: " + JSON.stringify(navPath)) // This is where the NPC has forgotten?
                 // var myNeighbours = nodeRegistry[myName]["Neighbours"]
                 var meInNavPath = navPath.indexOf(myName)
+                if(meInNavPath > -1)
+                {
+                    //event.block.world.broadcast("I'm in the nav path!")
+                    var nextNode = navPath[meInNavPath + 1]
+                    var nextNodePos = nodeRegistry[nextNode]["Pos"]
+                    event.entity.navigateTo(nextNodePos[0], nextNodePos[1], nextNodePos[2], event.entity.getStoreddata().get("NavSpeed"))
+                }
+                /*else
+                {
+                    event.block.world.broadcast("I'm not in the nav path!")
+                }*/
+                // Code graveyard here...
                 //event.block.world.broadcast("meInNavPath: " + String(meInNavPath))
-                var nextNode = navPath[meInNavPath + 1]
                 //event.block.world.broadcast("nextNode: " + nextNode)
-                var nextNodePos = nodeRegistry[nextNode]["Pos"]
                 //event.block.world.broadcast("nextNodePos: " + JSON.stringify(nextNodePos))
                 //event.block.world.broadcast("isNavigating1?: " + String(event.entity.isNavigating()))
                 //event.block.world.broadcast("navigationPath1: " + String(event.entity.getNavigationPath().getX()))
-                event.entity.navigateTo(nextNodePos[0], nextNodePos[1], nextNodePos[2], event.entity.getStoreddata().get("NavSpeed"))
                 //event.entity.clearNavigation()
                 //event.entity.navigateTo(1384,56,-650, event.entity.getStoreddata().get("Speed"))
                 //event.block.world.broadcast("isNavigating2?: " + String(event.entity.isNavigating()))

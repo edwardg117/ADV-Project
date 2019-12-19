@@ -52,12 +52,12 @@ function prepNav(npc, start, end, speed)
     spider.in("CNPCsRoads")
     var shortestPath = ""
 
-    if(spider.exists("NodeRegistry.json")) // Does the Node Registry exist? Can't go anywhere without it
+    if(spider.exists(npc.world.getName() + "_NodeRegistry.json")) // Does the Node Registry exist? Can't go anywhere without it
     {
-        if(spider.exists("paths.json"))
+        if(spider.exists(npc.world.getName() + "_paths.json"))
         {
-            var nodeRegistry = JSON.parse(spider.get("NodeRegistry.json"))
-            var paths = JSON.parse(spider.get("paths.json"))
+            var nodeRegistry = JSON.parse(spider.get(npc.world.getName() + "_NodeRegistry.json"))
+            var paths = JSON.parse(spider.get(npc.world.getName() + "_paths.json"))
             // Check to see if the node has already been created under that name
             if(start in nodeRegistry)
             {

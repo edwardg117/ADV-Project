@@ -6,9 +6,11 @@ import math
 def mapPaths(nodes):
     toMap = list(nodes.keys())
     masterList = dict()
+    iterations = 0
+    totalNodes = len(toMap)
     for nodeToMap in toMap:
         if(len(nodes[nodeToMap]["Neighbours"]) == 0):
-            print(nodes[nodeToMap]["Name"] + " has no neighbours, skipping rougue node")
+            print(nodes[nodeToMap]["Name"] + " has no neighbours, skipping rouge node")
             continue
         openSet = [nodeToMap] # The nodes we have reached but want to investigate, we start with the starting node
         reached = list() # Nodes that have been reached
@@ -16,11 +18,12 @@ def mapPaths(nodes):
         subList = dict() # Dictionary to hold values for the current node
         # Fill the sub dict with entries
         for nodeName in toMap:
-            print("Adding", nodeName, "to the current sub list")
+            #print("Adding", nodeName, "to the current sub list")
             subList[nodeName] = [math.inf, None]
         subList[nodeToMap] = [0,None] # The Starting node has a distance of 0
-        print("Preparing to map paths from", nodeToMap)
-        print(subList)
+        iterations += 1
+        print("Preparing to map paths from", nodeToMap, "(" + str(iterations) + "/" + str(totalNodes) + ")")
+        #print(subList)
         current = nodeToMap # Current node is the starting node lmao
         # Find all paths
 
@@ -50,12 +53,12 @@ def mapPaths(nodes):
                 print("## Skipping " + str(unReached) + " as node/s are unreachable")
                 unReached = []
 
-            nodeList = list(nodes.keys()) # Sanity check: print each node, how far it is from the start and the shortest path from the last node to it
-            for node in nodeList:
-                print(node, subList[node][0], subList[node][1])
-        print("New subList:")
-        print(subList)
-        print("Appending", nodeToMap, "to Masterlist")
+            #nodeList = list(nodes.keys()) # Sanity check: print each node, how far it is from the start and the shortest path from the last node to it
+            #for node in nodeList:
+                #print(node, subList[node][0], subList[node][1])
+        #print("New subList:")
+        #print(subList)
+        #print("Appending", nodeToMap, "to Masterlist")
         masterList[nodeToMap] = subList
     print("Masterlist is:")
     print(masterList)
@@ -91,6 +94,7 @@ def main():
     nodes = dict()
     paths = dict()
 
+    world = input("What is the name of the world you want to map?\n> ")
     #paths = mapPaths(nodes)
     while True:
         ans = input("What do you want to do? (R) Read nodes from file, (M) Map Nodes, (F) Find shortest path, (L) List Nodes, (X) Exit\n> ").upper()
@@ -98,12 +102,12 @@ def main():
         if ans == "R":
             try:
                 print("Reading from nodeRegistry.json")
-                f = open("nodeRegistry.json", "r")
+                f = open(world + "_nodeRegistry.json", "r")
                 nodes = json.load(f)
                 f.close
                 del f
             except FileNotFoundError:
-                f = open("nodeRegistry.json", "w")
+                f = open(world + "_nodeRegistry.json", "w")
                 json.dump(nodes, f)
                 f.close()
                 del f
@@ -113,12 +117,12 @@ def main():
 
             try:
                 print("Reading from paths.json")
-                f = open("paths.json", "r")
+                f = open(world + "_paths.json", "r")
                 paths = json.load(f)
                 f.close
                 del f
             except FileNotFoundError:
-                f = open("paths.json", "w")
+                f = open(world + "_paths.json", "w")
                 json.dump(paths, f)
                 f.close()
                 del f
@@ -131,7 +135,7 @@ def main():
         elif ans == "M":
             if nodes:
                 paths = mapPaths(nodes)
-                f = open("paths.json", "w")
+                f = open(world + "_paths.json", "w")
                 json.dump(paths, f)
                 f.close
                 del f
