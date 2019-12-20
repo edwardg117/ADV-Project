@@ -1,5 +1,5 @@
 /*
-Roads aplpha 2 by edwardg
+Roads aplpha 3 by edwardg
 Uses jsonified by ratquaza (baito), https://github.com/ratquaza/jsonified
 
 In this version:
@@ -18,6 +18,8 @@ In this version:
         - Able to tell when a node has no path to it and avoids crash
     - Records all path information in a separate json file so it can be read by another script
 - Automatically removes itself from the register if destroyed
+- Updates where the NPC is whenever it passes it and updates a second value if it is in the node list
+    - If in nav path -> I am the last reached node in the path, update in NPC
 
 
 Planned
@@ -29,7 +31,6 @@ Planned
     5. Decision Node    (Also could be called "itersection node", directs the NPC down the correct road and corrects the path if the NPC went the wrong way)
 - More intuative method for learning neighbours (who is next in line and previous if backtracking enabled)
 - Where it is, ie. in a City or between two Cities
-- Interface for NPCs to use so they can make use of it
 - Ensure that the block can only be destroyed by a player in creative mode and no other means
 
 Type 0 = Start/End
@@ -249,6 +250,7 @@ function collide(event)
                 if(meInNavPath > -1)
                 {
                     //event.block.world.broadcast("I'm in the nav path!")
+                    event.entity.getStoreddata().put("LastLocationRecorded", myName)
                     var nextNode = navPath[meInNavPath + 1]
                     var nextNodePos = nodeRegistry[nextNode]["Pos"]
                     event.entity.navigateTo(nextNodePos[0], nextNodePos[1], nextNodePos[2], event.entity.getStoreddata().get("NavSpeed"))

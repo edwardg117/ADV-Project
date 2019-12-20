@@ -6,11 +6,17 @@ Companion script: Roads.js
 Uses jsonified by ratquaza (baito), https://github.com/ratquaza/jsonified
 
 In this version:
-- 
+- Can navigate from one node to another if nodes have been mapped/pathed (any node to any node)
+- Navigates to the starting node if it's not already standing on it
+- Stops navigating hen target node is reached
+- Navigation speed can be changed from walking super slow to running at the speed of light
+- Attempts to autorecover if navigation fails (because NPCs seem to stop navigating even if they haven't reached the target location)
+    - Tries to start pathfinding again 3 times
+    - On the 4th try the NPC is teleported to the node it can't reach
 
 
 Planned:
-- 
+- (I'm making this up as a go along)
 
 
 Put into NPC:
@@ -41,6 +47,7 @@ function init(event)
     event.npc.getStoreddata().put("CurrentLocation", home)
     event.npc.getStoreddata().put("NavTo", home)
     event.npc.getStoreddata().put("navPath", "")
+    event.npc.getStoreddata().put("consecutiveRevoverFails", 0)
 
 }
 
@@ -127,7 +134,43 @@ function tick(event)
             //event.npc.world.broadcast("navPathExists!")
             if(event.npc.getStoreddata().get("isNavigating"))
             {
-                // rgrgrgrg
+                // NPC is trying to reach somewhere
+                if(!(event.npc.isNavigating()))
+                {
+                    // NPC has failed for some reason? Auto Recover
+                    //event.npc.world.broadcast("I'm trying to auto recover!")
+                    event.npc.clearNavigation()
+                    var spiderClass = Java.type("org.baito.forge.jsonified.Spider")
+                    var spider = new spiderClass()
+                    spider.in("CNPCsRoads")
+                    var nodeRegistry = JSON.parse(spider.get(event.npc.world.getName() + "_NodeRegistry.json"))
+
+                    var lastNodeReached = event.npc.getStoreddata().get("LastLocationRecorded")
+                    var navPath = JSON.parse(event.npc.getStoreddata().get("navPath"))
+                    var meInNavPath = navPath.indexOf(lastNodeReached)
+                    //var returnTo = nodeRegistry[currentLocation]["Pos"] // For going backwards, initial solutions are silly :P
+                    var nextNode = navPath[meInNavPath + 1]
+                    var nextNodePos = nodeRegistry[nextNode]["Pos"]
+                    var fails = event.npc.getStoreddata().get("consecutiveRevoverFails") // After 3 failed attempts to reach a node, the npc probably can't get to it
+                    if(fails < 3)
+                    {
+                        //event.npc.world.broadcast("Trying to autorecover to " + JSON.stringify(nextNodePos))
+                        //event.npc.navigateTo(returnTo[0], returnTo[1], returnTo[2], event.npc.getStoreddata().get("NavSpeed"))
+                        event.npc.navigateTo(nextNodePos[0], nextNodePos[1], nextNodePos[2], event.npc.getStoreddata().get("NavSpeed"))
+                        fails += 1
+                        event.npc.getStoreddata().put("consecutiveRevoverFails", fails)
+                    }
+                    else
+                    {
+                        event.npc.setPosition(nextNodePos[0], nextNodePos[1], nextNodePos[2])
+                    }
+                }
+                else
+                {
+                    //var fails = event.npc.getStoreddata().get("consecutiveRevoverFails")
+                    event.npc.getStoreddata().put("consecutiveRevoverFails", 0)
+
+                }
 
             }
             else
@@ -143,12 +186,12 @@ function tick(event)
         else
         {
             // No nav path exists, make one
-            event.npc.world.broadcast("Navigating from: " + event.npc.getStoreddata().get("CurrentLocation") + " to " + event.npc.getStoreddata().get("NavTo"))
+            //event.npc.world.broadcast("Navigating from: " + event.npc.getStoreddata().get("CurrentLocation") + " to " + event.npc.getStoreddata().get("NavTo"))
             var shortestPath = prepNav(event.npc, event.npc.getStoreddata().get("CurrentLocation"), event.npc.getStoreddata().get("NavTo"), event.npc.getStoreddata().get("NavSpeed"))
             //event.npc.world.broadcast("shortestPath after return: " + JSON.stringify(shortestPath))
-            event.npc.getStoreddata().put("LastLocationRecorded", "")
+            event.npc.getStoreddata().put("LastLocationRecorded", event.npc.getStoreddata().get("CurrentLocation"))
             event.npc.getStoreddata().put("navPath", JSON.stringify(shortestPath))
-            event.npc.world.broadcast("navPath in NPC: " + event.npc.getStoreddata().get("navPath"))
+            //event.npc.world.broadcast("navPath in NPC: " + event.npc.getStoreddata().get("navPath"))
         }
         //event.npc.getStoreddata().put("LastLocationRecorded", event.npc.getStoreddata().get("CurrentLocation"))
         //var shortestPath = prepNav(event.npc, event.npc.getStoreddata().get("CurrentLocation"), event.npc.getStoreddata().get("NavTo"), event.npc.getStoreddata().get("NavSpeed"))
