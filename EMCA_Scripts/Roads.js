@@ -62,7 +62,7 @@ function init(event)
     if(event.block.getStoreddata().get("init"))
     {
         // Block has been initialised before
-        var nodeRegistry = getNodeRegistry();
+        var nodeRegistry = getNodeRegistry(event);
         if(event.block.getStoreddata().get("Name") != name)
         {
             // Node name has changed, update everything
@@ -103,7 +103,7 @@ function init(event)
         {
             // Node Registry doesn't exist, create it
             var nodeRegistry = {};
-            spider.create(event.block.world.getName() + "_NodeRegistry.json", 1, JSON.stringify({nodeRegistry}));
+            spider.create(event.block.world.getName() + "_NodeRegistry.json", 1, JSON.stringify(nodeRegistry));
         }
 
         // We now have a Node Registry, see if the new node can be added
@@ -131,6 +131,9 @@ function init(event)
 function addNodeToRegistry(event, nodeRegistry)
 {
     // Adds a node to the Node Registry
+    var spiderClass = Java.type("org.baito.forge.jsonified.Spider");
+    var spider = new spiderClass();
+    spider.in("CNPCsRoads");
     var aboutMe = {};
 
     // Node Type
@@ -155,7 +158,7 @@ function addNodeToRegistry(event, nodeRegistry)
     {
         var i = 0;
         var distToNeighbour;
-        for(i = 0; i < neighbours.length; i++);
+        for(i = 0; i < neighbours.length; i++)
         {
             distToNeighbour = getDistancetoNeighbour(event.block, neighbours[i], nodeRegistry);
             finalNeighbours.push([neighbours[i], distToNeighbour]);
@@ -171,6 +174,8 @@ function addNodeToRegistry(event, nodeRegistry)
 function removeNodeFromRegistry(event, nodeRegistry)
 {
     // Removes a node from the Node Registy
+    var spiderClass = Java.type("org.baito.forge.jsonified.Spider");
+    var spider = new spiderClass();
     var nodeName = event.block.getStoreddata().get("Name");
 
     delete nodeRegistry[nodeName]; // Remove from memory
