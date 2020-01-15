@@ -105,25 +105,25 @@ function backUp(npc)
     npc.getAi().setReturnsHome(false);
 
     var facing = player.getRotation();
-    if(facing > 45 && facing <=135)
+    if((facing > 225 && facing <=315) || (facing > -135 && facing <= -45)) // Negative values because sometimes the values are negative
     {
         // East, Positive X
-        pos = pos.subtract(3,0,0);
+        pos = pos.add(3,0,0);
         npc.navigateTo(pos.getX(), pos.getY(), pos.getZ(), 1);
     }
-    else if(facing > 135 && facing <=225)
+    else if((facing > 135 && facing <=225) || (facing > -225 && facing <= -135))
     {
         // North, Negative Z
         pos = pos.subtract(0,0,3);
         npc.navigateTo(pos.getX(), pos.getY(), pos.getZ(), 1);
     }
-    else if(facing > 225 && facing <=315)
+    else if((facing > 45 && facing <=135) || (facing > -315 && facing <= -225)) 
     {
         // West, Negative X
-        pos = pos.add(3,0,0);
+        pos = pos.subtract(3,0,0);
         npc.navigateTo(pos.getX(), pos.getY(), pos.getZ(), 1);
     }
-    else if((facing > 315 && facing <=360) || (facing >= 0 && facing <=45))
+    else if((facing > 315 && facing <=360) || (facing > -45 && facing <=45) || (facing >= -360 && facing <= -315))
     {
         // South, Positive Z
         pos = pos.add(0,0,3);

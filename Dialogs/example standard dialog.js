@@ -23,7 +23,7 @@ var dialog  = {
         [
             ["Who are you?", "I'm a villager here. I have lived in this village my whole life.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, ""],
             ["Tell me something about this village", "This village has been around for ages. Enjoy your stay here.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, ""],
-            ["Go to response list 'Advanced'", "Sure thing!", "red", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, ""],
+            ["Go to response list 'Advanced'", "Sure thing!", "red", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "Advanced"],
             ["Goodbye", "Bye!", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "End"]
         ]
     },
@@ -69,7 +69,7 @@ function scoreboardLessThanOrEqual(npc, objective, score)
 
 function broadcastMessage(npc, message)
 {
-    npc.worldbroadcast(message);
+    npc.world.broadcast(message);
     return true;
 }
 
