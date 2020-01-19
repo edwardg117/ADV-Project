@@ -39,6 +39,7 @@ function initInventory(npc, invSize, invContents)
     // Initializes the NPC's inventory to the desired size
     // Use getInventoryContents(container) on an IContainer and see saveInventory(event) for how this should work
     invContents = invContents || null;
+    invSize = invSize || GStatic_DefaultInvSize;
     var inventoriesFolder = new File("saves/" + npc.world.getName() + "/inventories");
     var inventoryFile = new File("saves/" + npc.world.getName() + "/inventories/" + npc.getName() + " " + GnpcUUID + ".txt");
     if(!inventoryFile.exists()) 

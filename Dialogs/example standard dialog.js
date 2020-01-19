@@ -7,9 +7,9 @@ var player = npc.world.getEntity(npc.getStoreddata().get("inDialogWith"));
 
 for functions:
 - They are only passed an NPC (npc)
-- structure is function(npc){// Your code here here}
+- structure is function(event, npc){// Your code here here}
 - For readability you should make your own function below the dialog variable so inside the option looks neater
-    i.e for an availability option: function(npc){scoreboardGreaterThanOrEqual(npc, "objectiveName", 5);}
+    i.e for an availability option: function(event, npc){scoreboardGreaterThanOrEqual(npc, "objectiveName", 5);}
 
 response structure:
 ["Player response option", "Npc response if chosen", "colour", "sound", function(){/*Availability options, default: return true;}, function(){/*Run if option is selected, default: return false;}, "List to go to or End, leave empty for same list"]
@@ -34,7 +34,7 @@ var dialog  = {
         "diagOptions":
         [
             ["Take me back", "Moving back to start list.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "Start"],
-            ["Broadcast: Hello!", "Doing it!", "gold", "", function(){/*Availability options*/return true;}, function(npc){/*Run if option is selected*/broadcastMessage(npc, "Hello!");}, ""],
+            ["Broadcast: Hello!", "Doing it!", "gold", "", function(){/*Availability options*/return true;}, function(event, npc){/*Run if option is selected*/broadcastMessage(npc, "Hello!");}, ""],
             ["Goodbye", "Bye!", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "End"]
         ]
     }

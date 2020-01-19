@@ -7,10 +7,10 @@ How to get the player for use inside a function:
 var player = npc.world.getEntity(npc.getStoreddata().get("inDialogWith"));
 
 for functions:
-- They are only passed an NPC (npc)
-- structure is function(npc){// Your code here here}
+- They are passed event and an NPC (event, npc)
+- structure is function(event, npc){// Your code here here}
 - For readability you should make your own function below the dialog variable so inside the option looks neater
-    i.e for an availability option: function(npc){scoreboardGreaterThanOrEqual(npc, "objectiveName", 5);}
+    i.e for an availability option: function(event, npc){scoreboardGreaterThanOrEqual(npc, "objectiveName", 5);}
 
 response structure:
 ["Player response option", "Npc response if chosen", "colour", "sound", function(){/*Availability options, default: return true;}, function(){/*Run if option is selected, default: return false;}, "List to go to or End, leave empty for same list"]
@@ -22,7 +22,7 @@ var dialog  = {
         "Sound":"minecraft:entity.wolf.ambient",
         "diagOptions":
         [
-            ["I think we should travel together", "Woof!", "green", "minecraft:entity.wolf.ambient", function(){/*Availability options*/return true;}, function(npc){/*Run if option is selected*/recruitCompanion(npc);}, "IsCompanion"], 
+            ["I think we should travel together", "Woof!", "green", "minecraft:entity.wolf.ambient", function(){/*Availability options*/return true;}, function(event, npc){/*Run if option is selected*/recruitCompanion(npc);}, "IsCompanion"], 
             ["Goodbye", "Woof.", "gold", "minecraft:entity.wolf.ambient", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "End"]
         ]
     },
@@ -32,11 +32,11 @@ var dialog  = {
         "Sound":"minecraft:entity.wolf.ambient",
         "diagOptions":
         [
-            ["It's time for us to part ways", "Whine", "red", "minecraft:entity.wolf.whine", function(){/*Availability options*/return true;}, function(npc){/*Run if option is selected*/fireCompanion(npc);}, "NotCompanion"],
-            ["Wait here", "Woof.", "gold", "minecraft:entity.wolf.ambient", function(npc){/*Availability options*/return !(npc.getStoreddata().get("isWaiting"));}, function(npc){/*Run if option is selected*/startWaiting(npc);}, ""],
-            ["Follow me", "Woof!", "gold", "minecraft:entity.wolf.ambient", function(npc){/*Availability options*/return npc.getStoreddata().get("isWaiting");}, function(npc){/*Run if option is selected*/stopWaiting(npc);}, ""],
+            ["It's time for us to part ways", "Whine", "red", "minecraft:entity.wolf.whine", function(){/*Availability options*/return true;}, function(event, npc){/*Run if option is selected*/fireCompanion(npc);}, "NotCompanion"],
+            ["Wait here", "Woof.", "gold", "minecraft:entity.wolf.ambient", function(event, npc){/*Availability options*/return !(npc.getStoreddata().get("isWaiting"));}, function(event, npc){/*Run if option is selected*/startWaiting(npc);}, ""],
+            ["Follow me", "Woof!", "gold", "minecraft:entity.wolf.ambient", function(event, npc){/*Availability options*/return npc.getStoreddata().get("isWaiting");}, function(event, npc){/*Run if option is selected*/stopWaiting(npc);}, ""],
             ["Can I ask you some questions?", "Woof?", "gold", "minecraft:entity.wolf.ambient", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "AboutSelf"],
-            ["Back up a bit", "Woof.", "gold", "minecraft:entity.wolf.ambient", function(){/*Availability options*/return true;}, function(npc){/*Run if option is selected*/backUp(npc);}, ""],
+            ["Back up a bit", "Woof.", "gold", "minecraft:entity.wolf.ambient", function(){/*Availability options*/return true;}, function(event, npc){/*Run if option is selected*/backUp(npc);}, ""],
             ["Let's go!", "Woof!.", "gold", "minecraft:entity.wolf.ambient", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "End"]
         ]
     },
