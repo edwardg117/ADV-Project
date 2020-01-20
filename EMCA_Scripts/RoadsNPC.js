@@ -53,7 +53,7 @@ spider.in("CNPCsRoads")
 
 Things to remember
 Timer values:
-1 = Check navigation, if need to move to the next node or try to recover
+3 = Check navigation, if need to move to the next node or try to recover
 */
 
 function initializeRoadsNPC(event)
@@ -146,7 +146,7 @@ function trekTo(npc, destination, speed)
 
 function timer(event)
 {
-    if(event.id == 1)
+    if(event.id == 3)
     {
         if(!event.npc.isNavigating())
         {
