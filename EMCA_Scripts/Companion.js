@@ -85,29 +85,30 @@ function meleeAttack(event)
         event.npc.getStoreddata().put("level", npcLevel);
         event.npc.getStoreddata().put("attackNum", 0);
         
-        event.npc.world.broadcast(event.npc.getDisplay().	getName() + " is now Level " + npcLevel);
+        event.npc.world.broadcast(event.npc.getDisplay().getName() + " is now Level " + npcLevel);
     }
     event.npc.getStoreddata().put("attackNum", attackNum + 1);
 }
 
-// Recruiting / dismissing of NPC
+// Recruiting / dismissing of NPC, uses alternate dialog script
 
 /*function interact(event)
 {
-    // Place the correct option for dialog entry into the first slot
+    // Initiate dialog with scripts
     if(event.npc.getRole().getInfinite())
     {
         if(event.npc.getStoreddata().get("isWaiting"))
         {
-            event.npc.setDialog(0, event.API.dialogs.get(9));
+            startDialog(event.npc, event.player, "IsCompanion");
         }
         else
         {
-            event.npc.setDialog(0, event.API.dialogs.get(5)); // Companion start
+            startDialog(event.npc, event.player, "IsCompanion");
         }
     }
     else
     {
-        event.npc.setDialog(0, event.API.dialogs.get(4)); // Not companion start
+        startDialog(event.npc, event.player, "NotCompanion");
     }
+    event.setCanceled(true);
 }*/
