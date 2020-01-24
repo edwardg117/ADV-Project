@@ -7,7 +7,7 @@ var jobNode = "Barn Front Desk" // Job location
 var maxHorses = 0 // Maximum number of horses for sale at one time
 var restockTime = 24000 // How long until vendor should restock horses in ticks, 24000 is one MC day
 var basePrice = 50 // Baseline price for a horse with 5/5/5 stats
-var priceGain = 2.5 // Streaches the price line
+var priceGain = 1.2 // Stretches the price line
 var horseQuality = 10 // Out of 10, how good are the horses sold?
 
 var trainsHorses = 1 // Can the NPC train the player's horse
@@ -20,8 +20,8 @@ var Const_horseJumpRange = [0.39, 0.4	, 0.45	, 0.48	, 0.58	, 0.645, 	0.73	, 0.78
 
 function interact(event)
 {
-    var horseUUID = "337a38ef-ecc1-45d4-b3b2-ecf7a66c288d";
-    horseValue(event.npc, horseUUID);
+    var horseUUID = event.player.getStoreddata().get("playerHorse");
+    event.npc.world.broadcast("Horse Value: " + horseValue(event.npc, horseUUID));
 }
 function horseValue(npc, horseUUID)
 {
@@ -68,10 +68,40 @@ function horseValue(npc, horseUUID)
         }
         else
         {
-            horseValue += (basePrice / 3) * (1/(5 - healthLevel) * priceGain);
+            //                           16.666                                                    2.5
+            horseValue += (basePrice / 3) * (1/((5 - healthLevel) * priceGain));
         }
     }
     else{horseValue += (basePrice / 3)}
     
-    npc.world.broadcast("Horse Value: " + horseValue);
+    if(speedLevel != 5)
+    {
+        if(speedLevel > 5)
+        {
+            horseValue += (basePrice / 3) * ((speedLevel - 5) * priceGain);
+        }
+        else
+        {
+            //                           16.666                                                    2.5
+            horseValue += (basePrice / 3) * (1/((5 - speedLevel) * priceGain));
+        }
+    }
+    else{horseValue += (basePrice / 3)}
+    
+    if(jumpLevel != 5)
+    {
+        if(jumpLevel > 5)
+        {
+            horseValue += (basePrice / 3) * ((jumpLevel - 5) * priceGain);
+        }
+        else
+        {
+            //                           16.666                                                    2.5
+            horseValue += (basePrice / 3) * (1/((5 - jumpLevel) * priceGain));
+        }
+    }
+    else{horseValue += (basePrice / 3)}
+    
+    //npc.world.broadcast("Horse Value: " + horseValue);
+    return horseValue;
 }
