@@ -14,9 +14,9 @@ var trainsHorses = 1 // Can the NPC train the player's horse
 var jobSkillLevel = 10 // Out of 10 (1-10), how good at training are they? Affects price
 
 // Constant values, DO NOT CHANGE >:(
-var Const_horseHealthRange = [2, 10, 12,14,16,18,20,22, 26,28,30];
-var Const_horseSpeedRange = [0.1, 0.1125, 0.1375	, 0.1525	, 0.1925, 	0.2325, 	0.2875, 	0.3	, 0.3375, 	0.35	, 0.4];
-var Const_horseJumpRange = [0.39, 0.4	, 0.45	, 0.48	, 0.58	, 0.645, 	0.73	, 0.785	, 0.848	, 0.915	, 0.97];
+var Const_horseHealthRange = [2, 10, 12, 14, 16, 18, 20, 22, 26, 28, 30];
+var Const_horseSpeedRange = [0.1, 0.1125, 0.1375, 0.1525, 0.1925, 0.2325, 0.2875, 0.3, 0.3375, 0.35, 0.4];
+var Const_horseJumpRange = [0.39, 0.4, 0.45, 0.48, 0.58, 0.645, 0.73, 0.785, 0.848, 0.915, 0.97];
 
 function interact(event)
 {
