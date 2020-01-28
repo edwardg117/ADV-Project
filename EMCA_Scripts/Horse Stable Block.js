@@ -1,4 +1,20 @@
+var belogsTo = ""
+var ewf
+
+
+
+function init(event)
+{
+    event.block.setIsPassible(true); // Player can walk through the block
+    event.block.setModel("minecraft:air");
+}
+
 function interact(event)
+{
+    createHorse(event);
+}
+
+function createHorse(event)
 {
     var horse = event.block.world.createEntity("minecraft:horse");
     var Const_horseHealthRange = [2, 10, 12, 14, 16, 18, 20, 22, 26, 28, 30];
