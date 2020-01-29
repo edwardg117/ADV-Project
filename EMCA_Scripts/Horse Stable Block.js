@@ -1,7 +1,9 @@
-var belogsTo = ""
+var belogsTo = "" // Name of job block
 var ewf
 
-
+var File = Java.type("java.io.File");
+var Files = Java.type("java.nio.file.Files");
+var CHARSET_UTF_8 = Java.type("java.nio.charset.StandardCharsets").UTF_8;
 
 function init(event)
 {
@@ -11,10 +13,27 @@ function init(event)
 
 function interact(event)
 {
-    createHorse(event);
+    var jobFile = new File("saves/" + event.block.world.getName() + "/jobs/" + belongsTo + ".txt");
+    if(jobFile.exists())
+    {
+        //var fileLines = Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8);
+        //var fileContents = {"test":"ahh"};
+        var fileContents = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+        /*log("Contents Read");
+        log(JSON.stringify(fileContents))
+        log(fileContents["Name"])
+        log(JSON.stringify(Object.keys(fileContents)))    Spent ages going fileContents.keys() wondering why it was sad
+        log("Can I be seen?")*/
+        if(Object.keys(fileContents).indexOf("WorkerUUID") >= 0)
+        {
+            createHorse(event, fileContents["WorkerUUID"]);
+        }
+        else{log("[ERROR!] Job has no associated worker! Use Job_Horse Seller to asign an npc to this job.");}
+    }
+    else{log("[ERROR!] Job file does not exist, check spelling for 'belongsTo' or create a job with this name.");}
 }
 
-function createHorse(event)
+function createHorse(event, workerUUID)
 {
     var horse = event.block.world.createEntity("minecraft:horse");
     var Const_horseHealthRange = [2, 10, 12, 14, 16, 18, 20, 22, 26, 28, 30];
@@ -27,7 +46,11 @@ function createHorse(event)
 4,260,516,772,1028,
 5,261,517,773,1029,
 6,262,518,774,1030]
-    
+    var worker = event.block.world.getEntity(workerUUID);
+    var horseQuality = worker.getStoreddata().get("horseQuality");
+    var qualityRange = [horseQuality - 2, horseQuality];
+    if(qualityRange[0] < 1){qualityRange[0] = 1;}
+    if(qualityRange[1] > 10){qualityRange[1] = 10;}
     var chosenVariant = horseVariants[randInt(0,35)];
     //horse.getEntityNbt().	setInteger("Variant", chosenVariant);
     //event.block.world.broadcast(horse.getEntityNbt().getType("Variant"));
@@ -43,9 +66,9 @@ function createHorse(event)
     horse.addTag("needsVariant");
     horse.setPos(event.block.getPos());
     horse.spawn();
-    var randomHealth = Const_horseHealthRange[randInt(1,10)];
-    var randomSpeed = Const_horseSpeedRange[randInt(1,10)];
-    var randomJump = Const_horseJumpRange[randInt(1,10)];
+    var randomHealth = Const_horseHealthRange[randInt(qualityRange[0],qualityRange[1])];
+    var randomSpeed = Const_horseSpeedRange[randInt(qualityRange[0],qualityRange[1])];
+    var randomJump = Const_horseJumpRange[randInt(qualityRange[0],qualityRange[1])];
     event.API.executeCommand(event.block.world, '/entitydata @e[type=horse,tag=needsVariant] {SaddleItem:{id:"minecraft:saddle",Count:1b},Tame:1,Variant:' + chosenVariant + ',Attributes:[{Name:generic.maxHealth,Base:' + randomHealth + '},{Name:generic.movementSpeed,Base:' + randomSpeed + '},{Name:horse.jumpStrength,Base:' + randomJump + '}]}');
     horse.removeTag("needsVariant");
     //horse.getEntityNbt().	setInteger("Variant", chosenVariant); // setInteger broke ;(
