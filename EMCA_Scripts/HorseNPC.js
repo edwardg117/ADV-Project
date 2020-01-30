@@ -1,4 +1,7 @@
-/* Roads Stuff
+/* 
+NPC that sells horses V 0.04 by edwardg
+
+Roads Stuff
 var home = ""
 var city = ""
 
@@ -6,7 +9,7 @@ var city = ""
 var jobNode = "Barn Front Desk" // Job location
 var jobName = "Horse Seller" // Name of job
 var maxHorses = 0 // Maximum number of horses for sale at one time
-var restockTime = 24000 // How long until vendor should restock horses in ticks, 24000 is one MC day
+var restockTime = 1200 // How long until vendor should restock horses in seconds, 1200 seconds in 20 minutes
 var basePrice = 50 // Baseline price for a horse with 5/5/5 stats
 var priceGain = 1.2 // Stretches the price line
 var horseQuality = 10 // Out of 10, how good are the horses sold? This value is the maximum, min is this value -2 (which bottoms out at 1)
@@ -32,6 +35,7 @@ function init(event)
     {
         var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
         jobDetails["WorkerUUID"] = event.npc.getUUID();
+        jobDetails["RestockTime"] = restockTime;
         Files.write(jobFile.toPath(), JSON.stringify(jobDetails).getBytes());
         log("Added NPC UUID to job file as the worker");
     }
@@ -40,12 +44,21 @@ function init(event)
         log("Did not add job to file because it doesn't exist yet.");
     }
 }
-
-function interact(event)
+/*
+function interact(event) FORGOT TO COPY WHAT WAS IN THE NPC ACROSS :S
 {
-    var horseUUID = event.player.getMount().getUUID(); //.getStoreddata().get("playerHorse");
-    event.npc.world.broadcast("Horse Value: " + horseValue(event.npc, horseUUID));
-}
+    //var horseUUID = event.player.getMount().getUUID(); //.getStoreddata().get("playerHorse");
+    //event.npc.world.broadcast("Horse Value: " + horseValue(event.npc, horseUUID));
+
+    // Let's make him talk about his stock
+    var jobFile = new File("saves/" + event.npc.world.getName() + "/jobs/" + jobName + ".txt");
+    var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+    var stock = jobDetails["HorseBlocks"];
+    for(var i = 0; i > stock.length; i += 1)
+    {
+        event.npc.world.broadcast("Horse " + (i + 1) + ":\nPrice: " + horseValue(event.npc, stock[i][1]));
+    }
+}*/
 function horseValue(npc, horseUUID)
 {
     var horse = npc.world.getEntity(horseUUID);
@@ -80,7 +93,7 @@ function horseValue(npc, horseUUID)
     var healthLevel = Const_horseHealthRange.indexOf(horseMaxHealth);
     var speedLevel = Const_horseSpeedRange.indexOf(horseSpeed);
     var jumpLevel = Const_horseJumpRange.indexOf(horseJump);
-    npc.world.broadcast("HealthLevel: " + healthLevel + "\nSpeedLevel: " + speedLevel + "\nJumpLevel: " + jumpLevel);
+    //npc.world.broadcast("HealthLevel: " + healthLevel + "\nSpeedLevel: " + speedLevel + "\nJumpLevel: " + jumpLevel);
     var horseValue = 0;
     // Add health value
     if(healthLevel != 5)
@@ -126,5 +139,42 @@ function horseValue(npc, horseUUID)
     else{horseValue += (basePrice / 3)}
     
     //npc.world.broadcast("Horse Value: " + horseValue);
-    return horseValue;
+    return Math.ceil(horseValue);
+}
+
+function aboutHorse(npc, horseUUID)
+{
+    var horse = npc.world.getEntity(horseUUID);
+    var horseMaxHealth = horse.getMaxHealth();
+    var attributes = horse.getEntityNbt().getList("Attributes",10);
+    var i = 0;
+    var attValue = 0;
+    while(i < attributes.length)
+    {
+        if(attributes[i].getString("Name") == "generic.movementSpeed")
+        {
+            attValue = attributes[i].getDouble("Base");
+            i = attributes.length; // Break? nah :P
+        }
+        i += 1;
+    }
+    var horseSpeed =  attValue;
+    i = 0;
+    attValue = 0;
+    while(i < attributes.length)
+    {
+        if(attributes[i].getString("Name") == "horse.jumpStrength")
+        {
+            attValue = attributes[i].getDouble("Base");
+            i = attributes.length; // Break? nah :P
+        }
+        i += 1;
+    }
+    var horseJump = attValue;
+    //npc.world.broadcast(horseMaxHealth + " " + horseSpeed + " " + horseJump);
+    
+    var healthLevel = Const_horseHealthRange.indexOf(horseMaxHealth);
+    var speedLevel = Const_horseSpeedRange.indexOf(horseSpeed);
+    var jumpLevel = Const_horseJumpRange.indexOf(horseJump);
+    return [healthLevel, speedLevel, jumpLevel, horse.getEntityNbt().getInteger("Variant")]
 }

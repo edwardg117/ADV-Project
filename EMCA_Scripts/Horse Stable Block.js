@@ -1,5 +1,10 @@
-var belogsTo = "" // Name of job block
-var ewf
+/*
+Horse Stable block v 0.03 by edwardg
+Requires Run Delay by Ronan https://pastebin.com/YVqHYiAi
+*/
+
+//var belogsTo = "" // Name of job block
+
 
 var File = Java.type("java.io.File");
 var Files = Java.type("java.nio.file.Files");
@@ -8,10 +13,43 @@ var CHARSET_UTF_8 = Java.type("java.nio.charset.StandardCharsets").UTF_8;
 function init(event)
 {
     event.block.setIsPassible(true); // Player can walk through the block
-    event.block.setModel("minecraft:air");
+    event.block.setModel("minecraft:barrier");
+
+    if(!event.block.getStoreddata().get("init"))
+    {
+        var jobFile = new File("saves/" + event.block.world.getName() + "/jobs/" + belongsTo + ".txt");
+        if(jobFile.exists())
+        {
+            var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+            if(Object.keys(jobDetails).indexOf("HorseBlocks") >= 0)
+            {
+                // Already registred blocks, add this one to that
+                var size = jobDetails["HorseBlocks"].length;
+                
+                var pos = event.block.getPos();
+                // [[Location], horseUUID]
+                jobDetails["HorseBlocks"].push([[pos.getX(),pos.getY(),pos.getZ()], null])
+                event.block.getStoreddata().put("meInHorseBlockList", (size));
+                Files.write(jobFile.toPath(), JSON.stringify(jobDetails).getBytes());
+            }
+            else
+            {
+                // First block to be registered
+                var pos = event.block.getPos();
+                // [[Location], horseUUID]
+                jobDetails["HorseBlocks"] = [[[pos.getX(),pos.getY(),pos.getZ()], null]];
+                event.block.getStoreddata().put("meInHorseBlockList", 0);
+                Files.write(jobFile.toPath(), JSON.stringify(jobDetails).getBytes());
+            }
+            event.block.getStoreddata().put("init", 1)
+            event.block.getStoreddata().put("needsNewHorse", 1);
+            log("init Done")
+        }
+
+    }
 }
 
-function interact(event)
+/*function interact(event)
 {
     var jobFile = new File("saves/" + event.block.world.getName() + "/jobs/" + belongsTo + ".txt");
     if(jobFile.exists())
@@ -23,7 +61,7 @@ function interact(event)
         log(JSON.stringify(fileContents))
         log(fileContents["Name"])
         log(JSON.stringify(Object.keys(fileContents)))    Spent ages going fileContents.keys() wondering why it was sad
-        log("Can I be seen?")*/
+        log("Can I be seen?")
         if(Object.keys(fileContents).indexOf("WorkerUUID") >= 0)
         {
             createHorse(event, fileContents["WorkerUUID"]);
@@ -31,7 +69,7 @@ function interact(event)
         else{log("[ERROR!] Job has no associated worker! Use Job_Horse Seller to asign an npc to this job.");}
     }
     else{log("[ERROR!] Job file does not exist, check spelling for 'belongsTo' or create a job with this name.");}
-}
+}*/
 
 function createHorse(event, workerUUID)
 {
@@ -51,7 +89,7 @@ function createHorse(event, workerUUID)
     var qualityRange = [horseQuality - 2, horseQuality];
     if(qualityRange[0] < 1){qualityRange[0] = 1;}
     if(qualityRange[1] > 10){qualityRange[1] = 10;}
-    var chosenVariant = horseVariants[randInt(0,35)];
+    var chosenVariant = horseVariants[randInt(0,34)];
     //horse.getEntityNbt().	setInteger("Variant", chosenVariant);
     //event.block.world.broadcast(horse.getEntityNbt().getType("Variant"));
     /*var keys = horse.getEntityNbt().	getKeys();
@@ -62,7 +100,7 @@ function createHorse(event, workerUUID)
         keyList.push(keys[i]);
     }
     event.block.world.broadcast(JSON.stringify(keyList));*/
-    event.block.world.broadcast(chosenVariant);
+    //event.block.world.broadcast(chosenVariant);
     horse.addTag("needsVariant");
     horse.setPos(event.block.getPos());
     horse.spawn();
@@ -71,10 +109,57 @@ function createHorse(event, workerUUID)
     var randomJump = Const_horseJumpRange[randInt(qualityRange[0],qualityRange[1])];
     event.API.executeCommand(event.block.world, '/entitydata @e[type=horse,tag=needsVariant] {SaddleItem:{id:"minecraft:saddle",Count:1b},Tame:1,Variant:' + chosenVariant + ',Attributes:[{Name:generic.maxHealth,Base:' + randomHealth + '},{Name:generic.movementSpeed,Base:' + randomSpeed + '},{Name:horse.jumpStrength,Base:' + randomJump + '}]}');
     horse.removeTag("needsVariant");
+    event.block.getStoreddata().put("hasHorse", 1);
+    event.block.getStoreddata().put("myHorse", horse.getUUID());
+    // Update Job File
+    var jobFile = new File("saves/" + event.block.world.getName() + "/jobs/" + belongsTo + ".txt");
+    var fileContents = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+    var meInList = event.block.getStoreddata().get("meInHorseBlockList");
+    //event.block.world.broadcast("me in list: " + meInList)
+    fileContents["HorseBlocks"][meInList][1] = horse.getUUID();
+    Files.write(jobFile.toPath(), JSON.stringify(fileContents).getBytes());
+
     //horse.getEntityNbt().	setInteger("Variant", chosenVariant); // setInteger broke ;(
 }
 
 function randInt(min, max) 
 {   // Returns a random number
     return Math.floor(Math.random() * (max - min + 1) ) + min;
+}
+
+function tick(event)
+{
+    if(event.block.getStoreddata().get("needsNewHorse"))
+    {
+        var jobFile = new File("saves/" + event.block.world.getName() + "/jobs/" + belongsTo + ".txt");
+
+        if(jobFile.exists())
+        {
+            // It exists, get the assigned worker
+            var fileContents = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+            if(Object.keys(fileContents).indexOf("WorkerUUID") >= 0)
+            {
+                runDelay(fileContents["RestockTime"], function(){createHorse(event, fileContents["WorkerUUID"]);});
+                event.block.getStoreddata().put("needsNewHorse", 0);
+            }
+            else{log("[ERROR!] Job has no associated worker! Use Job_Horse Seller to asign an npc to this job.");}
+        }
+    }
+    if(event.block.getStoreddata().get("myHorse"))
+    {
+        if(!event.block.world.getEntity(event.block.getStoreddata().get("myHorse")).isAlive() && event.block.getStoreddata().get("hasHorse"))
+        {
+            event.block.getStoreddata().put("needsNewHorse", 1);
+            event.block.getStoreddata().put("hasHorse", 0);
+            event.block.getStoreddata().put("myHorse", 0);
+            // Update Job File
+            var jobFile = new File("saves/" + event.block.world.getName() + "/jobs/" + belongsTo + ".txt");
+            var fileContents = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+            var meInList = event.block.getStoreddata().get("meInHorseBlockList");
+            fileContents["HorseBlocks"][meInList][1] = null;
+            Files.write(jobFile.toPath(), JSON.stringify(fileContents).getBytes());
+        }
+    }
+    
+    runDelayTick();
 }
