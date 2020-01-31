@@ -1,6 +1,9 @@
 /*
 Job / workplace registry so info can be passed between the NPC and any part of the job that needs it
-by edwardg V0.01
+by edwardg V0.02
+
+New in this version:
+- No longer removes all job data when you update the name or city
 
 Put the following into the scripted block:
 
@@ -26,8 +29,9 @@ function init(event)
         if(event.block.getStoreddata().get("Name") != name || event.block.getStoreddata().get("City") != city)
         {
             log("Updating Details.");
+            var jobDetails = getJobDetails(event);
             if(event.block.getStoreddata().get("Name") != name){removeJobDetails(event);}
-            addJobDetails(event);
+            updateDetails(event, jobDetails);
         }
     }
     else
@@ -88,4 +92,19 @@ function removeJobDetails(event)
     // Removes job file
     var jobFile = new File("saves/" + event.block.world.getName() + "/jobs/" + event.block.getStoreddata().get("Name") + ".txt");
 return jobFile.delete();
+}
+
+function updateDetails(event, jobDetails)
+{
+    // Job Name
+    event.block.getStoreddata().put("Name", name);
+    jobDetails["Name"] = name;
+
+    // City Name
+    event.block.getStoreddata().put("City", city);
+    jobDetails["City"] = city;
+
+    // Save File
+    var jobFile = new File("saves/" + event.block.world.getName() + "/jobs/" + name + ".txt");
+    Files.write(jobFile.toPath(), JSON.stringify(jobDetails).getBytes());
 }

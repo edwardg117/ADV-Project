@@ -107,7 +107,7 @@ function createHorse(event, workerUUID)
     var randomHealth = Const_horseHealthRange[randInt(qualityRange[0],qualityRange[1])];
     var randomSpeed = Const_horseSpeedRange[randInt(qualityRange[0],qualityRange[1])];
     var randomJump = Const_horseJumpRange[randInt(qualityRange[0],qualityRange[1])];
-    event.API.executeCommand(event.block.world, '/entitydata @e[type=horse,tag=needsVariant] {SaddleItem:{id:"minecraft:saddle",Count:1b},Tame:1,Variant:' + chosenVariant + ',Attributes:[{Name:generic.maxHealth,Base:' + randomHealth + '},{Name:generic.movementSpeed,Base:' + randomSpeed + '},{Name:horse.jumpStrength,Base:' + randomJump + '}]}');
+    event.API.executeCommand(event.block.world, '/entitydata @e[type=horse,tag=needsVariant] {Temper:0,Tame:0,Variant:' + chosenVariant + ',Attributes:[{Name:generic.maxHealth,Base:' + randomHealth + '},{Name:generic.movementSpeed,Base:' + randomSpeed + '},{Name:horse.jumpStrength,Base:' + randomJump + '}]}');
     horse.removeTag("needsVariant");
     event.block.getStoreddata().put("hasHorse", 1);
     event.block.getStoreddata().put("myHorse", horse.getUUID());
@@ -141,6 +141,9 @@ function tick(event)
             {
                 runDelay(fileContents["RestockTime"], function(){createHorse(event, fileContents["WorkerUUID"]);});
                 event.block.getStoreddata().put("needsNewHorse", 0);
+                var meInList = event.block.getStoreddata().get("meInHorseBlockList");
+                fileContents["HorseBlocks"][meInList][1] = null;
+                Files.write(jobFile.toPath(), JSON.stringify(fileContents).getBytes());
             }
             else{log("[ERROR!] Job has no associated worker! Use Job_Horse Seller to asign an npc to this job.");}
         }
@@ -155,9 +158,9 @@ function tick(event)
             // Update Job File
             var jobFile = new File("saves/" + event.block.world.getName() + "/jobs/" + belongsTo + ".txt");
             var fileContents = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
-            var meInList = event.block.getStoreddata().get("meInHorseBlockList");
+            /*var meInList = event.block.getStoreddata().get("meInHorseBlockList");
             fileContents["HorseBlocks"][meInList][1] = null;
-            Files.write(jobFile.toPath(), JSON.stringify(fileContents).getBytes());
+            Files.write(jobFile.toPath(), JSON.stringify(fileContents).getBytes());*/ // Moved to needsNewHorse
         }
     }
     

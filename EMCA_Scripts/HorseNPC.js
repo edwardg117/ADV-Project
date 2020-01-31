@@ -45,7 +45,7 @@ function init(event)
     }
 }
 /*
-function interact(event) FORGOT TO COPY WHAT WAS IN THE NPC ACROSS :S
+function interact(event)
 {
     //var horseUUID = event.player.getMount().getUUID(); //.getStoreddata().get("playerHorse");
     //event.npc.world.broadcast("Horse Value: " + horseValue(event.npc, horseUUID));
@@ -54,46 +54,26 @@ function interact(event) FORGOT TO COPY WHAT WAS IN THE NPC ACROSS :S
     var jobFile = new File("saves/" + event.npc.world.getName() + "/jobs/" + jobName + ".txt");
     var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
     var stock = jobDetails["HorseBlocks"];
-    for(var i = 0; i > stock.length; i += 1)
+    event.npc.world.broadcast("============\n||Stock Details||\n============");
+    var i = 0;
+    for(i = 0; i < stock.length; i += 1)
     {
-        event.npc.world.broadcast("Horse " + (i + 1) + ":\nPrice: " + horseValue(event.npc, stock[i][1]));
+        var test = (" " + stock[i][1]).slice(1);
+        if(stock[i][1])
+        {
+            var horseDeets = aboutHorse(event.npc, test);
+            event.npc.world.broadcast("Horse " + (i + 1) + ":\nPrice:" + horseValue(event.npc, test) + "\nVariant: "+ horseDeets[3] + "\nHealth Level: " + horseDeets[0] + "\nSpeed Level: " + horseDeets[1] + "\nJump Level: " + horseDeets[2] +  "\n========");
+        }
+        else{event.npc.world.broadcast("Horse " + (i + 1) + ": SOLD");}
     }
 }*/
 function horseValue(npc, horseUUID)
 {
-    var horse = npc.world.getEntity(horseUUID);
-    var horseMaxHealth = horse.getMaxHealth();
-    var attributes = horse.getEntityNbt().getList("Attributes",10);
-    var i = 0;
-    var attValue = 0;
-    while(i < attributes.length)
-    {
-        if(attributes[i].getString("Name") == "generic.movementSpeed")
-        {
-            attValue = attributes[i].getDouble("Base");
-            i = attributes.length; // Break? nah :P
-        }
-        i += 1;
-    }
-    var horseSpeed =  attValue;
-    i = 0;
-    attValue = 0;
-    while(i < attributes.length)
-    {
-        if(attributes[i].getString("Name") == "horse.jumpStrength")
-        {
-            attValue = attributes[i].getDouble("Base");
-            i = attributes.length; // Break? nah :P
-        }
-        i += 1;
-    }
-    var horseJump = attValue;
-    //npc.world.broadcast(horseMaxHealth + " " + horseSpeed + " " + horseJump);
-    
-    var healthLevel = Const_horseHealthRange.indexOf(horseMaxHealth);
-    var speedLevel = Const_horseSpeedRange.indexOf(horseSpeed);
-    var jumpLevel = Const_horseJumpRange.indexOf(horseJump);
-    //npc.world.broadcast("HealthLevel: " + healthLevel + "\nSpeedLevel: " + speedLevel + "\nJumpLevel: " + jumpLevel);
+    var horseLevels = aboutHorse(npc, horseUUID);
+    var healthLevel = horseLevels[0];
+    var speedLevel = horseLevels[1];
+    var jumpLevel = horseLevels[2];
+    //npc.world.broadcast("HealthLevel: " + healthLevel + "\nSpeedLevel: " + speedLevel + "\nJumpLevel: " + jumpLevel + JSON.stringify(horseLevels));
     var horseValue = 0;
     // Add health value
     if(healthLevel != 5)
@@ -177,4 +157,70 @@ function aboutHorse(npc, horseUUID)
     var speedLevel = Const_horseSpeedRange.indexOf(horseSpeed);
     var jumpLevel = Const_horseJumpRange.indexOf(horseJump);
     return [healthLevel, speedLevel, jumpLevel, horse.getEntityNbt().getInteger("Variant")]
+}
+
+function sellHorse(npc, playerUUID, horseUUID, blockNumber)
+{
+    // Attempts to sell Horse, returns sucess or failure 
+    // Blocknumber is where the horse stable block is in the list of "HorseBlocks"
+    
+    var returnValue = true;
+    var player = npc.world.getEntity(playerUUID);
+    
+    if(player.getStoreddata().get("playerHorse"))
+    {
+        if(npc.world.getEntity(player.getStoreddata().get("playerHorse")))
+        {
+            if(npc.world.getEntity(player.getStoreddata().get("playerHorse")).isAlive()){var canBuy = false;}
+            else{var canBuy = true;}
+        }
+        else{var canBuy = true;}
+    }
+    else{var canBuy = true;}
+
+    if(!canBuy)
+    {
+        returnValue = false;
+        log("Player already owns a horse, horse must be sold or killed.")
+    }
+    else
+    {
+        var horse = npc.world.getEntity(horseUUID);
+        var calculatedValue = horseValue(npc, horseUUID);
+        var playerMoney = getPlayerMoney(player);
+        if(playerMoney >= calculatedValue)
+        {
+            // Player has adequte funds, sell horse
+            log("Player has money")
+            var jobFile = new File("saves/" + npc.world.getName() + "/jobs/" + jobName + ".txt");
+            // Transfer ownership to player
+            player.getStoreddata().put("playerHorse", horse.getUUID());
+            playerMoney -= calculatedValue; // Calculate remaining money
+            player.world.getScoreboard().setPlayerScore(player.getName(), "money", playerMoney, ""); // Set it
+
+            // Tell the block the horse was sold so it will start the restock timer and update the file
+            var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+            var horseBlocks = jobDetails["HorseBlocks"];
+            var pos = horseBlocks[blockNumber][0];
+            var horseBlock = npc.world.getBlock(pos[0], pos[1], pos[2]);
+            horseBlock.getStoreddata().put("myHorse", 0); // let the block sort it out
+            horseBlock.getStoreddata().put("needsNewHorse", 1);
+
+            // Update horse
+            horse.addTag("justSoldBy" + npc.getDisplay().getName());
+            npc.executeCommand('/entitydata @e[type=horse,tag=justSoldBy'  + npc.getDisplay().getName() + '] {SaddleItem:{id:"minecraft:saddle",Count:1b},Tame:1}')
+        }
+
+    }
+
+    return returnValue;
+}
+
+function getPlayerMoney(player)
+{
+    // Gets the player's money, this is a stand in function untill I decide
+    // how to handle it better / what currency should be
+
+    var playerScore = player.world.getScoreboard().getPlayerScore(player.getName(), "money", "");
+    return playerScore;
 }
