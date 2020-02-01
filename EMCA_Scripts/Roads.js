@@ -258,7 +258,7 @@ function collide(event)
             if(event.entity.getStoreddata().get("NavTo") != myName)
             {
                 // NPC is not trying to get to me, am I on the path to it?
-                var nodeRegistry = getNodeRegistry(event);
+                //var nodeRegistry = getNodeRegistry(event);
                 var navPath = JSON.parse(event.entity.getStoreddata().get("navPath")); // The path the NPC is taking, found in the NPC
                 var meInNavPath = navPath.indexOf(myName);
                 if(meInNavPath > -1)

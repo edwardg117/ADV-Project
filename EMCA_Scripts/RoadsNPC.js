@@ -137,8 +137,8 @@ function trekTo(npc, destination, speed)
 
         npc.clearNavigation();
         npc.navigateTo(start["Pos"][0], start["Pos"][1], start["Pos"][2], speed);
-        npc.getTimers().stop(1); // Not sure why it's a problem
-        npc.getTimers().start(1, 1, true);
+        npc.getTimers().stop(3); // Not sure why it's a problem
+        npc.getTimers().start(3, 1, true);
         log("Navigation started " + start["Name"] + " to " + end["Name"])
     }
     else{log("[ERR!]: Did not get a shortest path, navigation not started!");}

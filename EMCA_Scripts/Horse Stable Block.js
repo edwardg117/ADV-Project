@@ -3,7 +3,7 @@ Horse Stable block v 0.03 by edwardg
 Requires Run Delay by Ronan https://pastebin.com/YVqHYiAi
 */
 
-//var belogsTo = "" // Name of job block
+//var belongsTo = "" // Name of job block
 
 
 var File = Java.type("java.io.File");

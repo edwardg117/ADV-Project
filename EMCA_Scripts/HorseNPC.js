@@ -208,7 +208,9 @@ function sellHorse(npc, playerUUID, horseUUID, blockNumber)
 
             // Update horse
             horse.addTag("justSoldBy" + npc.getDisplay().getName());
-            npc.executeCommand('/entitydata @e[type=horse,tag=justSoldBy'  + npc.getDisplay().getName() + '] {SaddleItem:{id:"minecraft:saddle",Count:1b},Tame:1}')
+            npc.executeCommand('/entitydata @e[type=horse,tag=justSoldBy'  + npc.getDisplay().getName() + '] {SaddleItem:{id:"minecraft:saddle",Count:1b},Tame:1}');
+            horse.removeTag("justSoldBy" + npc.getDisplay().getName());
+            horse.addTag("playerHorse");
         }
 
     }
