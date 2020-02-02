@@ -1,5 +1,5 @@
 /* 
-NPC that sells horses V 0.04 by edwardg
+NPC that sells horses V 0.05 by edwardg
 
 Roads Stuff
 var home = ""
@@ -69,6 +69,9 @@ function interact(event)
 }*/
 function horseValue(npc, horseUUID)
 {
+    // Takes the worker and the uuid of the horse
+    // Uses basePrice and Price gain to determine how much a given horse is worth based on it's levels
+    // Returns an integer 
     var horseLevels = aboutHorse(npc, horseUUID);
     var healthLevel = horseLevels[0];
     var speedLevel = horseLevels[1];
@@ -80,15 +83,16 @@ function horseValue(npc, horseUUID)
     {
         if(healthLevel > 5)
         {
+            // Makes the value exponentially greater than 1/3 of the base price
             horseValue += (basePrice / 3) * ((healthLevel - 5) * priceGain);
         }
         else
         {
-            //                           16.666                                                    2.5
+            // Makes the value less than 1/3 of the base price
             horseValue += (basePrice / 3) * (1/((5 - healthLevel) * priceGain));
         }
     }
-    else{horseValue += (basePrice / 3)}
+    else{horseValue += (basePrice / 3)} // Makes the value exactly 1/3 of the base price
     
     if(speedLevel != 5)
     {
@@ -98,7 +102,6 @@ function horseValue(npc, horseUUID)
         }
         else
         {
-            //                           16.666                                                    2.5
             horseValue += (basePrice / 3) * (1/((5 - speedLevel) * priceGain));
         }
     }
@@ -112,21 +115,25 @@ function horseValue(npc, horseUUID)
         }
         else
         {
-            //                           16.666                                                    2.5
             horseValue += (basePrice / 3) * (1/((5 - jumpLevel) * priceGain));
         }
     }
     else{horseValue += (basePrice / 3)}
     
     //npc.world.broadcast("Horse Value: " + horseValue);
-    return Math.ceil(horseValue);
+    return Math.ceil(horseValue); // Make the price a whole number, because we can't have decimals
 }
 
 function aboutHorse(npc, horseUUID)
 {
+    // Takes the worker and the horseUUID
+    // Determines all the levels and variant of the horse
+    // Returns an array of integers in the following order: [healthLevel, speedLevel, jumpLevel, Variant]
     var horse = npc.world.getEntity(horseUUID);
-    var horseMaxHealth = horse.getMaxHealth();
+    var horseMaxHealth = horse.getMaxHealth(); // Don't needs to find this one manually
     var attributes = horse.getEntityNbt().getList("Attributes",10);
+
+    // Movement speed and jump strength are stored in a horse's attributes and must be found manually
     var i = 0;
     var attValue = 0;
     while(i < attributes.length)
@@ -139,6 +146,7 @@ function aboutHorse(npc, horseUUID)
         i += 1;
     }
     var horseSpeed =  attValue;
+
     i = 0;
     attValue = 0;
     while(i < attributes.length)
@@ -164,53 +172,56 @@ function sellHorse(npc, playerUUID, horseUUID, blockNumber)
     // Attempts to sell Horse, returns sucess or failure 
     // Blocknumber is where the horse stable block is in the list of "HorseBlocks"
     
-    var returnValue = true;
+    var returnValue = false; // Should probably assume the worst and hope for the best
     var player = npc.world.getEntity(playerUUID);
-    
+    // Does the player have a UUID stored for a horse?
     if(player.getStoreddata().get("playerHorse"))
     {
+        // Does the UUID belong to something?
         if(npc.world.getEntity(player.getStoreddata().get("playerHorse")))
         {
-            if(npc.world.getEntity(player.getStoreddata().get("playerHorse")).isAlive()){var canBuy = false;}
-            else{var canBuy = true;}
+            // Is the horse alive?
+            if(npc.world.getEntity(player.getStoreddata().get("playerHorse")).isAlive()){var canBuy = false;} // It is, refuse sale
+            else{var canBuy = true;} // It's dead, sale can proceed
         }
-        else{var canBuy = true;}
+        else{var canBuy = true;} // Invalid uuid, sale can proceed
     }
-    else{var canBuy = true;}
+    else{var canBuy = true;} // No UUID stored, sale can proceed
 
     if(!canBuy)
     {
-        returnValue = false;
-        log("Player already owns a horse, horse must be sold or killed.")
+        log("Player already owns a horse, horse must be sold or killed.") // Log why the sale did not proceed
     }
     else
     {
         var horse = npc.world.getEntity(horseUUID);
         var calculatedValue = horseValue(npc, horseUUID);
-        var playerMoney = getPlayerMoney(player);
+        var playerMoney = getPlayerMoney(player); // Stand in function because I'm only using scoreboard values for testing atm
         if(playerMoney >= calculatedValue)
         {
             // Player has adequte funds, sell horse
             log("Player has money")
             var jobFile = new File("saves/" + npc.world.getName() + "/jobs/" + jobName + ".txt");
             // Transfer ownership to player
-            player.getStoreddata().put("playerHorse", horse.getUUID());
+            player.getStoreddata().put("playerHorse", horse.getUUID()); // Save horse UUID on player
             playerMoney -= calculatedValue; // Calculate remaining money
-            player.world.getScoreboard().setPlayerScore(player.getName(), "money", playerMoney, ""); // Set it
+            player.world.getScoreboard().setPlayerScore(player.getName(), "money", playerMoney, ""); // Set player money, still a stand in
 
             // Tell the block the horse was sold so it will start the restock timer and update the file
             var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
             var horseBlocks = jobDetails["HorseBlocks"];
-            var pos = horseBlocks[blockNumber][0];
-            var horseBlock = npc.world.getBlock(pos[0], pos[1], pos[2]);
+            var pos = horseBlocks[blockNumber][0]; // Acquire the positon of the block in IPos
+            var horseBlock = npc.world.getBlock(pos[0], pos[1], pos[2]); // Get the IBlock
             horseBlock.getStoreddata().put("myHorse", 0); // let the block sort it out
             horseBlock.getStoreddata().put("needsNewHorse", 1);
+            horseBlock.getStoreddata().put("hasHorse", 0);
 
             // Update horse
-            horse.addTag("justSoldBy" + npc.getDisplay().getName());
-            npc.executeCommand('/entitydata @e[type=horse,tag=justSoldBy'  + npc.getDisplay().getName() + '] {SaddleItem:{id:"minecraft:saddle",Count:1b},Tame:1}');
-            horse.removeTag("justSoldBy" + npc.getDisplay().getName());
-            horse.addTag("playerHorse");
+            horse.addTag("justSoldBy" + npc.getDisplay().getName()); // Tag the horse so /entitydata can find it specifically
+            npc.executeCommand('/entitydata @e[type=horse,tag=justSoldBy' + npc.getDisplay().getName() + '] {SaddleItem:{id:"minecraft:saddle",Count:1b},Tame:1}');
+            horse.removeTag("justSoldBy" + npc.getDisplay().getName()); // Done with this tag
+            horse.addTag("playerHorse"); // So that the sumonable horse script can find it
+            returnValue = true;
         }
 
     }
