@@ -10,6 +10,7 @@ To do:
 function init(event)
 {
     event.npc.addTag("npcHorse") // needed for teleporting and identifying this horse in minecraft
+    event.npc.world.getStoreddata().put("horseRider", event.npc.getUUID()); // Until I come up with a better solution
 }
 
 function tick(event)
@@ -43,7 +44,7 @@ function tick(event)
      if(event.message == "-onTop") // Mount Rider on Horse for no reason
     {
         var horse = event.player.world.getEntity((event.player.getStoreddata().get("playerHorse")))
-        var navigator = event.player.world.getEntity((event.player.getStoreddata().get("horseRider")))
+        var navigator = event.player.world.getEntity((event.player.world.getStoreddata().get("horseRider")))
         horse.addRider(navigator)
     }
 
