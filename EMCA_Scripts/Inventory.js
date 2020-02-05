@@ -1,5 +1,5 @@
 /*
-NPC Inventories V0.02 by edwardg
+NPC Inventories V0.03 by edwardg
 Special thanks to Ronan for demonstrating how to load inventories from files: https://github.com/Runonstof/CustomNPCs-Scripting-Software/blob/master/core/CustomMenuHandler.js
 Main features:
 - Minecraft like inventories for NPCs
@@ -7,14 +7,8 @@ Main features:
 - Automatically makes the folders/files and names the container the same as the NPC's name and UUID
 
 New in this version:
-- Now uses NPC's name and UUID to store inventory on file
-- All globals are static now (sort of, they just don't get changed)
-- Inventory size can be set in the fill range now, 1-6 rather than only 3
-- init and interact functions removed, replaced with:
-    - initInventory(npc, invSize, invContents)
-    - showInventory(event, player)
-  So now it will play nice with other scripts
-- Left clicking on an item that is identical with the one that is held will now stack them
+- Script no longer attempts to stack unstackable items
+- Script no longer attempts to stack items beyond the max stack size
 
 Planned:
 - Have the inventory follow the NPC across names
@@ -138,10 +132,32 @@ function customChestClicked(event)
         var slot = event.slotItem;
         if(held.compare(slot, false))
         {
-            // Same item, stack them in the slot
-            var air = event.player.world.createItem("minecraft:air", 0, 1);
-            event.slotItem.setStackSize(slot.getStackSize() + held.getStackSize());
-            event.heldItem = air.copy();
+            // Same item, can it be stacked?
+            if(event.slotItem.getMaxStackSize() == event.slotItem.getStackSize())
+            {
+                // Do nothing
+            }
+            else
+            {
+                // Is the player trying to stack them within the max size?
+                if(event.slotItem.getMaxStackSize() >= (event.slotItem.getStackSize() + event.heldItem.getStackSize()))
+                {
+                    //stack them in the slot
+                    var air = event.player.world.createItem("minecraft:air", 0, 1);
+                    event.slotItem.setStackSize(slot.getStackSize() + held.getStackSize());
+                    event.heldItem = air.copy();
+                }
+                else
+                {
+                    // Player is holding more than can be stacked, fill to stack size
+                    var numInSlot = event.slotItem.getStackSize();
+                    var maxStackSize = event.slotItem.getMaxStackSize();
+                    var remainder = maxStackSize - numInSlot;
+
+                    event.slotItem.setStackSize(maxStackSize);
+                    event.heldItem.setStackSize(remainder);
+                }
+            }
         }
         else
         {
