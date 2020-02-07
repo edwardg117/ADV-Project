@@ -45,6 +45,14 @@ var dialog  = {
             ["I'd like to increase my horse's jumping ability", "Sure.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, ""],
             ["Actually, nevermind", "Alright.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, ""]
         ]
+    },
+    "HorseInventory":
+    {
+        "diagOptions":
+        [
+            ["Tell me about your horses", "Sure, here's what I got:", "gold", "", function(){/*Availability options*/ return true;}, function(){/*Run if option is selected*/ return false;}, ""],
+            ["I would like to buy one of your horses", "Alright, which one are you interested in?", "gold", "", function(){/*Availability options*/ return true;}, function(){/*Run if option is selected*/ return false;}, ""]
+        ]
     }
 }
 
