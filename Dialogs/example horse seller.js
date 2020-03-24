@@ -13,6 +13,9 @@ for functions:
 
 response structure:
 ["Player response option", "Npc response if chosen", "colour", "sound", function(){/*Availability options, default: return true;}, function(){/*Run if option is selected, default: return false;}, "List to go to or End, leave empty for same list"]
+
+Simple copy-paste:
+["option", "response", "gold", "", function(){return true;}, function(){return false;}, ""]
 */
 var dialog  = {
     "Start":
@@ -22,18 +25,9 @@ var dialog  = {
         "diagOptions":
         [
             ["Who are you?", "I'm the guy that sells horses.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, ""],
-            ["What do you have in stock?", "Bred these horses myself, you won't find any better around here.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, ""],
+            ["What do you have in stock?", "Bred these horses myself, you won't find any better around here.", "gold", "", function(){/*Availability options*/return true;}, function(event, npc){/*Run if option is selected*/listStock(event, npc);}, "HorseInventory"],
             ["Can you train my horse?", "Sure can, what'd you have in mind?", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, ""],
             ["Goodbye", "Bye.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "End"]
-        ]
-    },
-    "CurrentStock":
-    {
-        "diagOptions":
-        [
-            ["Take me back", "Moving back to start list.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "Start"],
-            ["Broadcast: Hello!", "Doing it!", "gold", "", function(){/*Availability options*/return true;}, function(event, npc){/*Run if option is selected*/broadcastMessage(npc, "Hello!");}, ""],
-            ["Goodbye", "Bye!", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "End"]
         ]
     },
     "HorseTraining":
@@ -50,8 +44,18 @@ var dialog  = {
     {
         "diagOptions":
         [
-            ["Tell me about your horses", "Sure, here's what I got:", "gold", "", function(){/*Availability options*/ return true;}, function(){/*Run if option is selected*/ return false;}, ""],
-            ["I would like to buy one of your horses", "Alright, which one are you interested in?", "gold", "", function(){/*Availability options*/ return true;}, function(){/*Run if option is selected*/ return false;}, ""]
+            ["Tell me about your horses again", "Sure, here's what I got:", "gold", "", function(){/*Availability options*/ return true;}, function(event, npc){/*Run if option is selected*/ listStock(event, npc);}, ""],
+            ["I would like to buy one of your horses", "Alright, which one are you interested in?", "gold", "", function(){/*Availability options*/ return true;}, function(event, npc){return generateReplacementList(npc);}, "DynamicList"],
+            ["Nevermind", "Alright.", "gold", "", function(){/*Availability options*/ return true;}, function(){/*Run if option is selected*/ return false;}, "Start"]
+        ]
+    },
+    "BuyingChosenHorse":
+    {
+        "diagOptions":
+        [
+            ["I would like to buy this horse", "Certianly!", "gold", "", function(event, npc){doesPlayerHaveFunds(event, npc);}, function(event, npc){sellToPlayer(event, npc);}, "Start"],
+            ["Actually, nevermind", "That's alright.", "gold", "", function(){return true;}, function(){return false;}, "Start"]
+
         ]
     }
 }
@@ -83,6 +87,7 @@ function scoreboardLessThanOrEqual(npc, objective, score)
     return value;
 }
 
+// uses broadcast to send a message
 function broadcastMessage(npc, message)
 {
     npc.world.broadcast(message);
@@ -95,4 +100,76 @@ function getPlayerStoreddata(npc, key)
     // You could use something similar to this to store and check if a player has read dialogs already
     var player = npc.world.getEntity(npc.getStoreddata().get("inDialogWith"));
     return player.getStoreddata().get(key);
+}
+
+// Prints out the current stock of horses
+function listStock(event, npc)
+{
+    // Aquire stock list
+    var jobFile = new File("saves/" + npc.world.getName() + "/jobs/" + jobName + ".txt");
+    var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+    var stock = jobDetails["HorseBlocks"];
+
+    npc.world.broadcast("============\n||Stock Details||\n============");
+    var i = 0;
+    for(i = 0; i < stock.length; i += 1)
+    {
+        var horseUUID = (" " + stock[i][1]).slice(1); // Trick to force a full copy so it gets passed to the function correctly
+        if(stock[i][1])
+        {
+            var horseDeets = aboutHorse(npc, horseUUID);
+            npc.world.broadcast("Horse " + (i + 1) + ":\nPrice:" + horseValue(npc, horseUUID) + "\nVariant: "+ horseDeets[3] + "\nHealth Level: " + horseDeets[0] + "\nSpeed Level: " + horseDeets[1] + "\nJump Level: " + horseDeets[2] +  "\n========");
+        }
+        else{npc.world.broadcast("Horse " + (i + 1) + ": SOLD");}
+    }
+    npc.world.broadcast("============\n|================\n============");
+}
+
+// Check to see if player can afford the horse they want
+function doesPlayerHaveFunds(event, npc)
+{
+    log("Determining if the player has the funds to buy that horse")
+    var player = npc.world.getEntity(npc.getStoreddata().get("inDialogWith"));
+    var playerMoney = getPlayerMoney(player);
+    var jobFile = new File("saves/" + npc.world.getName() + "/jobs/" + jobName + ".txt");
+    var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+    var stock = jobDetails["HorseBlocks"];
+    log(JSON.stringify(stock))
+    log(JSON.stringify(npc.getStoreddata().get("horseOfIntrest")))
+    var storedInfo = stock[npc.getStoreddata().get("horseOfIntrest")]
+    log(JSON.stringify(storedInfo))
+    var horseUUID = (" " + stock[npc.getStoreddata().get("horseOfIntrest")][1]).slice(1);
+    log(horseUUID)
+    var actualValue = horseValue(npc, horseUUID);
+
+    var result = false;
+    if(playerMoney >= actualValue)
+    {
+        result = true;
+    }
+    return result;
+}
+
+function sellToPlayer(event, npc)
+{
+    var jobFile = new File("saves/" + npc.world.getName() + "/jobs/" + jobName + ".txt");
+    var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+    var stock = jobDetails["HorseBlocks"];
+    var horseUUID = stock[npc.world.getEntity(npc.getStoreddata().get("horseOfIntrest"))][1];
+
+    sellHorse(npc, npc.getStoreddata().get("inDialogWith"), horseUUID, npc.getStoreddata().get("horseOfIntrest"));
+}
+
+function generateReplacementList(npc){
+    var jobFile = new File("saves/" + npc.world.getName() + "/jobs/" + jobName + ".txt");
+    var jobDetails = JSON.parse(Files.readAllLines(jobFile.toPath(), CHARSET_UTF_8)[0]);
+    var stock = jobDetails["HorseBlocks"];
+    var length = stock.length;
+    var options = [];
+    for(var i = 0; i < length; i += 1)
+    {
+        options.push(["Horse " + (i + 1), "Alright, you want to buy Horse " + (i + 1) + "?", "gold", "", function(){return true;}, function(event, npc){npc.getStoreddata().put("horseOfIntrest", i);}, "BuyingChosenHorse"]);
+    }
+    options.push(["I've changed my mind", "That's alright.", "gold", "", function(){return true;}, function(){return false;}, "Start"]);
+    return options;
 }

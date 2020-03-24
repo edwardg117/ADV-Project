@@ -35,11 +35,47 @@ var dialog  = {
         [
             ["Take me back", "Moving back to start list.", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "Start"],
             ["Broadcast: Hello!", "Doing it!", "gold", "", function(){/*Availability options*/return true;}, function(event, npc){/*Run if option is selected*/broadcastMessage(npc, "Hello!");}, ""],
+            ["[Ask Me About]", "What do you want to know?", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "AskMeAbout"],
             ["Goodbye", "Bye!", "gold", "", function(){/*Availability options*/return true;}, function(){/*Run if option is selected*/return false;}, "End"]
+        ]
+    },
+    "AskMeAbout": // See https://fallout.fandom.com/wiki/Tell_me_about for an example of how this is used
+    {
+        "UnknownTopic":[["Sorry, I don't know anything about that.", ""], ["Can't say I've heard of that.", ""], ["That doesn't ring a bell.", ""]], // Chosen at random
+        "LeaveReply":["Alright.", ""], // TODO support more than 1 later
+        "Topics":
+        [
+            [
+                ["Trigger Word/phrase", "Another trigger"], // These are the keywords/phases that will trigger the response, they are NOT case sensitive
+                [
+                    ["Response1", "sound"], ["Response 2", ""] // One or more response lines are allowed, they will be chosen at random
+                ]
+            ],
+            [
+                ["How high are you?", "How high are you", "High"], 
+                [
+                    ["No officer, it's 'Hi, how are you?'", ""]
+                ]
+            ],
+            [
+                ["Minecraft", "Game"], 
+                [
+                    ["I'm in Minecraft, yes.", ""], ["Yes, I know I'm in a game.", ""], ["Next you'll ask me what 1/0 is.", ""]
+                ]
+            ],
+            [
+                ["1/0"], 
+                [
+                    ["You must be fun at parties.", ""],["Do you treat everyone like this?", ""], ["You could at least pretend to care about me.", ""]
+                ]
+            ]
         ]
     }
 }
-
+//[[["","",""],[["",""],["",""],["",""]]],[["","",""],[["",""],["",""],["",""]]]]
+// Topic is split into a list of topics
+// A topic is split into a list of triggers and a list of reponses
+// A response is split into a list of the text and sound
 function scoreboardGreaterThanOrEqual(npc, objective, score)
 {
     // Uses the NPC to get the player and check their score
