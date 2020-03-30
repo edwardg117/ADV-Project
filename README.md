@@ -9,3 +9,4 @@ Current Files include:
 - Minecraft like inventories for NPCs
 - Alternate dialog using chat window
 - Companions (hirable and firable) <- uses alternate dialog
+- Bodies
