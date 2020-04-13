@@ -117,7 +117,7 @@ function continueDialog(event, chosenOption)
     //npc.say("AH")
     npc.world.playSoundAt(npc.getPos(), diagOptions[chosenDiagOption][RNPC_Sound], 1.0, 1.0); // Play sound for response
     //npc.say("phat oof")
-    npc.say(JSON.stringify(diagOptions));
+    //npc.say(JSON.stringify(diagOptions));
     diagOptions[chosenDiagOption][RScript](event, npc); // Run scripts for dialog if any
     //npc.say("code check")
 
