@@ -1,5 +1,5 @@
 /*
-Journeymap Waypoint Handler/Manager V0.03 by edwardg
+Journeymap Waypoint Handler/Manager V1.00 by edwardg
 Uses ScriptedJourneyMap v1.0.1 beta by slava_110 https://cdn.discordapp.com/attachments/177204059109982208/601412316583690251/ScriptedJourneyMap-1.0.1-beta.jar
 Written for Journeymap version 1.12.2-5.7.1
 Journeymap API Version: v1.12-1.4
