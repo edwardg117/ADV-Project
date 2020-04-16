@@ -23,7 +23,7 @@ These files are not feature complete but have working features that can be used.
 	- Remove dependence on commandblocks
 	- Easier install
 	- Better random teleport of horse
-- Roads (In-progress)
+- Roads
 	
 	Allows for the creation of road networks that NPCs will use to travel from location to location. This is really a visual thing but I think it looks better when NPCs actually travel along the roads. 
 	Also it enables traveling greater distances than would be possible otherwise.
@@ -79,7 +79,15 @@ These files are not feature complete but have working features that can be used.
 	- More death poses
 	- Option to randomly populate inventory using a loot table
 	- Remove dependency on RunDelay by Ronan (Works great but the body doesn't count down while it's unloaded. Going to change to checking the total world time at init, will also stop running things in tick)
+- Cities Block
 
+	Uses Journeymap Waypoint Handler/Manager to automatically add waypoints to players who get close enough and play a sound. Still early stages but it can change the waypoint colour depending on the player's faction rep.
+	
+	Planned:
+	- Register the city
+	- Auto update colour based on player standing (possibly the block won't do it but places where it updates the players rep will)
+	- Be useful for other things like roads and NPC AI
+	
 ### Planned Files
 These files either don't exist or don't have working versions. If they are uploaded you should wearily use them as a reference and never run them.
 - Player leveling up system
