@@ -51,6 +51,12 @@ var spiderClass = Java.type("org.baito.forge.jsonified.Spider")
 var spider = new spiderClass()
 spider.in("CNPCsRoads")
 
+Moving paths have to be set with movingPathEditor.js' setMovingPath(Npc, Points, Position, Type, Pauses)
+If an NPC encounters an unreachable node it will simply skip it and move on, 
+if it cannot reach the next few nodes easilly it will stop and start looping through points until it gets to one it can walk to (most likley the previous one) forever
+As long as the path is more than a few points it can be detected and I can do something about it.
+To recover I will probably have to use some scripted blocks at intersections that the NPC can teleport to if it gets stuck
+
 Things to remember
 Timer values:
 3 = Check navigation, if need to move to the next node or try to recover
@@ -184,7 +190,7 @@ function timer(event)
                 event.npc.getStoreddata().put("isNavigating", 0);
                 event.npc.getStoreddata().put("navPath", "");
                 event.npc.getStoreddata().put("isNavigating", 0);
-                event.npc.getTimers().stop(1);
+                event.npc.getTimers().stop(3);
                 log("Navigation Complete");
             }
         }
