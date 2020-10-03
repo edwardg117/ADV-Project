@@ -1,0 +1,112 @@
+{
+    "Info":
+    {
+        "Version": 2,
+        "World": "World Name",
+        "NumLocations": 12,
+        "NumGates": 10,
+        "NumNodes": 42,
+        "LockedBy": "",
+        "Desc": "Required Mappings: Location <> Location, Location <> Exit, City <> City. All Nodes belong to 'World'/are stateless"
+    },
+    "Cities":
+    {
+        "City1":
+        {
+            "Locations":
+            {
+                "Location 1":{"Pos":[0,0,0],"Neighbours":[["n1",1]],"City":"City1","Name":"Location 1"},
+                "Location 2":{"Pos":[0,0,-2],"Neighbours":[["n8",1]],"City":"City1","Name":"Location 2"},
+                "Location 3":{"Pos":[2,0,-4],"Neighbours":[["n9",1]],"City":"City1","Name":"Location 3"}
+            },
+            "Gates":
+            {
+                "G1":{"Type":"Exit","Pos":[5,0,0],"Neighbours":[["n10", 1]],"City":"City1"},
+                "G2":{"Type":"Entry","Pos":[5,0,0],"Neighbours":[["n4", 5]],"City":"City1"}
+            }
+        },
+        "City2":
+        {
+            "Locations":
+            {
+                "Location 5":{"Pos":[12,0,1],"Neighbours":[["n19",1]],"City":"City2","Name":"Location 5"},
+                "Location 6":{"Pos":[14,0,-1],"Neighbours":[["n20",1]],"City":"City2","Name":"Location 6"},
+                "Location 7":{"Pos":[14,0,-3],"Neighbours":[["n22",1]],"City":"City2","Name":"Location 7"}
+            },
+            "Gates":
+            {
+                "G3":{"Type":"Exit","Pos":[9,0,-3],"Neighbours":[["n12", 1]],"City":"City2"},
+                "G4":{"Type":"Entry","Pos":[9,0,-3],"Neighbours":[["n14", 1]],"City":"City2"},
+                "G5":{"Type":"Entry","Pos":[0,0,0],"Neighbours":[["n23", 1]],"City":"City2"},
+                "G6":{"Type":"Exit","Pos":[0,0,0],"Neighbours":[["n24", 1]],"City":"City2"}
+            }
+        },
+        "City3":
+        {
+            "Locations":
+            {
+                "Location 8":{"Pos":[0,0,0],"Neighbours":[["n27",1]],"City":"City3","Name":"Location 8"},
+                "Location 9":{"Pos":[0,0,0],"Neighbours":[["n31",1],["n29", 1]],"City":"City3","Name":"Location 9"},
+                "Location 10":{"Pos":[0,0,0],"Neighbours":[["n36",1],["n27", 1]],"City":"City3","Name":"Location 10"},
+                "Location 11":{"Pos":[0,0,0],"Neighbours":[["n39",1],["n40", 1]],"City":"City3","Name":"Location 11"}
+            },
+            "Gates":
+            {
+                "G7":{"Type":"Entry","Pos":[0,0,0],"Neighbours":[["n25", 1]],"City":"City3"},
+                "G8":{"Type":"Exit","Pos":[0,0,0],"Neighbours":[["n24", 1]],"City":"City3"},
+                "G9":{"Type":"Entry","Pos":[0,0,0],"Neighbours":[["n41", 1]],"City":"City3"},
+                "G10":{"Type":"Exit","Pos":[0,0,0],"Neighbours":[["n42", 1]],"City":"City3"}
+            }
+        },
+        "World":
+        {
+            "Locations":{"Location 4":{"Pos":[7,0,-4],"Neighbours":[["n12",1]],"City":"World","Name":"Location 4"},"Location 12":{"Pos":[0,0,0],"Neighbours":[["n42",1]],"City":"World","Name":"Location 12"}},
+            "Gates":{}
+        }
+    },
+    "Nodes":
+    {
+        "n1":{"isIntersection":false,"Pos":[1,0,0],"Neighbours":[["Location 1", 1],["n2",1]]},
+        "n2":{"isIntersection":false,"Pos":[2,0,0],"Neighbours":[["n1", 1],["n3",1]]},
+        "n3":{"isIntersection":true,"Pos":[3,0,0],"Neighbours":[["n2", 1],["n4",1],["n5",1]]},
+        "n4":{"isIntersection":false,"Pos":[4,0,0],"Neighbours":[["n3", 1],["G1",1]]},
+        "n5":{"isIntersection":false,"Pos":[3,0,-1],"Neighbours":[["n3", 1],["n6",1]]},
+        "n6":{"isIntersection":false,"Pos":[3,0,-2],"Neighbours":[["n5", 1],["n7",1]]},
+        "n7":{"isIntersection":true,"Pos":[2,0,-2],"Neighbours":[["n6", 1],["n8",1],["n9",1]]},
+        "n8":{"isIntersection":false,"Pos":[1,0,-2],"Neighbours":[["n7", 1],["Location 2",1]]},
+        "n9":{"isIntersection":false,"Pos":[2,0,-3],"Neighbours":[["n7", 1],["Location 3",1]]},
+        "n10":{"isIntersection":false,"Pos":[6,0,0],"Neighbours":[["n11", 1]]},
+        "n11":{"isIntersection":false,"Pos":[7,0,-1],"Neighbours":[["G4", 1]]},
+        "n12":{"isIntersection":false,"Pos":[6,0,-3],"Neighbours":[["n13", 1],["Location 4",1]]},
+        "n13":{"isIntersection":false,"Pos":[6,0,-1],"Neighbours":[["G2", 1]]},
+        "n14":{"isIntersection":false,"Pos":[10,0,-3],"Neighbours":[["G3", 1],["n15",1]]},
+        "n15":{"isIntersection":true,"Pos":[11,0,-3],"Neighbours":[["n14", 1],["n16",1],["n21",1],["n23",1]]},
+        "n16":{"isIntersection":false,"Pos":[11,0,-2],"Neighbours":[["n15", 1],["n17",1]]},
+        "n17":{"isIntersection":false,"Pos":[11,0,-1],"Neighbours":[["n16", 1],["n18",1]]},
+        "n18":{"isIntersection":true,"Pos":[12,0,-1],"Neighbours":[["n17", 1],["n19",1],["n20",1]]},
+        "n19":{"isIntersection":false,"Pos":[12,0,0],"Neighbours":[["n18", 1],["Location 5",1]]},
+        "n20":{"isIntersection":false,"Pos":[13,0,-1],"Neighbours":[["n18", 1],["Location 6",1]]},
+        "n21":{"isIntersection":false,"Pos":[12,0,-3],"Neighbours":[["n15", 1],["n21",1]]},
+        "n22":{"isIntersection":false,"Pos":[13,0,-3],"Neighbours":[["n21", 1],["Location 7",1]]},
+        "n23":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n15", 1],["G6",1]]},
+        "n24":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["G7", 1],["G5",1]]},
+        "n25":{"isIntersection":true,"Pos":[0,0,0],"Neighbours":[["n26", 1],["G8",1],["n30", 1]]},
+        "n26":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n27", 1],["n25",1]]},
+        "n27":{"isIntersection":true,"Pos":[0,0,0],"Neighbours":[["n26", 1],["Location 8",1],["n28", 1],["n32", 1]]},
+        "n28":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n27", 1],["n29",1]]},
+        "n29":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n28", 1],["Location 9",1]]},
+        "n30":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n25", 1],["n31",1]]},
+        "n31":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n30", 1],["Location 9",1]]},
+        "n32":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n27", 1],["n33",1],["n41", 1]]},
+        "n33":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n32", 1],["n34",1]]},
+        "n34":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n33", 1],["n35",1]]},
+        "n35":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n34", 1],["n36",1]]},
+        "n36":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n35", 1],["Location 10",1]]},
+        "n37":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n38", 1],["Location 10",1]]},
+        "n38":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n37", 1],["n39",1]]},
+        "n39":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n38", 1],["Location 11",1]]},
+        "n40":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["n41", 1],["Location 11",1]]},
+        "n41":{"isIntersection":true,"Pos":[0,0,0],"Neighbours":[["n40", 1],["n32",1],["G10", 1]]},
+        "n42":{"isIntersection":false,"Pos":[0,0,0],"Neighbours":[["G9", 1],["Location 12",1]]}
+    }
+}
