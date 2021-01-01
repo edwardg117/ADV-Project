@@ -1,9 +1,10 @@
 /*
-Journeymap Waypoint Handler/Manager V1.00 by edwardg
-Uses ScriptedJourneyMap v1.0.1 beta by slava_110 https://cdn.discordapp.com/attachments/177204059109982208/601412316583690251/ScriptedJourneyMap-1.0.1-beta.jar
+Journeymap Waypoint Handler/Manager V1.01 by edwardg
+Uses ScriptedJourneyMap v1.1.0 beta by slava_110 https://cdn.discordapp.com/attachments/372544887914233857/720758455215980564/ScriptedJourneyMap-1.1.0-beta.jar
 Written for Journeymap version 1.12.2-5.7.1
 Journeymap API Version: v1.12-1.4
 Huge thanks to Runon and slava_110 for their help and suggestions.
+Changes in V1.01: None, just updating the link to a jar that works on servers.
 
 About:
 Allows for the creation, modification and deletion of waypoints in Journeymap.
