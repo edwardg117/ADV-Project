@@ -1,10 +1,14 @@
 /*
-Journeymap Waypoint Handler/Manager V1.01 by edwardg
+Journeymap Waypoint Handler/Manager V1.02 by edwardg
 Uses ScriptedJourneyMap v1.1.0 beta by slava_110 https://cdn.discordapp.com/attachments/372544887914233857/720758455215980564/ScriptedJourneyMap-1.1.0-beta.jar
 Written for Journeymap version 1.12.2-5.7.1
 Journeymap API Version: v1.12-1.4
 Huge thanks to Runon and slava_110 for their help and suggestions.
 Changes in V1.01: None, just updating the link to a jar that works on servers.
+Changes in V1.02: Fixed waypoints re-loading on servers due to a bug in ScriptedJourneyMap. It's just a workaround but it will introduce some quirkyness:
+    - Every time a waypoint is loaded/reloaded it will get a new ID, so always use getWaypoints() to get the ID before doing anything with waypoints.
+    - This script will now only ever work on 1.12 because it uses obfuscated methods
+I have also updated the reloadWaypoints(), newWaypoint(), updateWaypoint() and setVisible() functions to work in multiplayer
 
 About:
 Allows for the creation, modification and deletion of waypoints in Journeymap.
@@ -47,7 +51,7 @@ function init(event)
     if(player.getTempdata().get("Waypoints"))
     {
         // Waypoints already loaded, do nothing
-        player.message("Waypoints already loaded, doing nothing")
+        log("[INFO] JMWaypointHandler.init(): Waypoints already loaded, doing nothing.");
     }
     else
     {
@@ -55,12 +59,12 @@ function init(event)
         if(player.getStoreddata().get("Waypoints"))
         {
             // There's Waypoints to load
-            player.message("There's Waypoints to load")
+            log("[INFO] JMWaypointHandler.init(): There's Waypoints to load, waiting 2 seconds before loading.");
             player.getTimers().start(500, 40, 0); // timer id 500, 40 ticks, no repeat picked 500 because it's big and I don't think anyone has 500 timers and 2 seconds to make sure it's after loading finishes
         }
         else
         {
-            player.message("There's no Waypoint data at all")
+            log("[INFO] JMWaypointHandler.init(): There's no Waypoint data at all, creating an empty registry.");
             player.getStoreddata().put("Waypoints", "{}"); // Ensure it looks nice for when some are added
             player.getTempdata().put("Waypoints", {});
         }
@@ -72,17 +76,41 @@ function timer(event)
     switch(event.id)
     {
         case 500:
-            var player = event.player;
-            var savedWaypointRegistry = JSON.parse(player.getStoreddata().get("Waypoints"));
-            var waypointRegistry = {};
-            for(var i = 0; i < Object.keys(savedWaypointRegistry).length; i++)
-            {
-                var existingPoint = ScriptedWaypoint.fromJSON(savedWaypointRegistry[Object.keys(savedWaypointRegistry)[i]]["WaypointJSON"]);
-                if(!(savedWaypointRegistry[Object.keys(savedWaypointRegistry)[i]]["isHidden"])){existingPoint.show(player);}
-                waypointRegistry[Object.keys(savedWaypointRegistry)[i]] = existingPoint;
-            }
-            player.getTempdata().put("Waypoints", waypointRegistry);
+            loadWaypoints(event.player);
             break;
+    }
+}
+/**DO NOT CALL THIS FUNCTION YOURSELF 
+ * Use reloadWaypoints() to avoid issues
+*/
+function loadWaypoints(Player)
+{
+    var isSinglePlayer = Player.world.getMCWorld().func_73046_m().func_71264_H(); // func_73046_m() = getMinecraftServer(), func_71264_H() = isSinglePlayer()
+    if(isSinglePlayer)
+    {
+        // Single player so can load from JSON
+        var savedWaypointRegistry = JSON.parse(Player.getStoreddata().get("Waypoints"));
+        var waypointRegistry = {};
+        for(var i = 0; i < Object.keys(savedWaypointRegistry).length; i++)
+        {
+            var existingPoint = ScriptedWaypoint.fromJSON(savedWaypointRegistry[Object.keys(savedWaypointRegistry)[i]]["WaypointJSON"]);
+            if(!(savedWaypointRegistry[Object.keys(savedWaypointRegistry)[i]]["isHidden"])){existingPoint.show(Player);}
+            waypointRegistry[Object.keys(savedWaypointRegistry)[i]] = existingPoint;
+        }
+        Player.getTempdata().put("Waypoints", waypointRegistry);
+    }
+    else
+    {
+        // Must use a sad solution to load waypoints
+        var oldRegistry = JSON.parse(Player.getStoreddata().get("Waypoints")); // will be overwritten
+        var waypointIDs = Object.keys(oldRegistry)
+        Player.getStoreddata().put("Waypoints", "{}"); // Clear the registry because we have to use new points
+        for(var i = 0; i < waypointIDs.length; i++)
+        {
+            var pos = Player.world.getBlock(oldRegistry[waypointIDs[i]]["ActualPos"][0], oldRegistry[waypointIDs[i]]["ActualPos"][1], oldRegistry[waypointIDs[i]]["ActualPos"][2]).getPos();
+            newWaypoint(Player, oldRegistry[waypointIDs[i]]["ActualName"], pos, oldRegistry[waypointIDs[i]]["Dim"], oldRegistry[waypointIDs[i]]["Colour"], !oldRegistry[waypointIDs[i]]["isHidden"], oldRegistry[waypointIDs[i]]["Editable"]);
+        }
+
     }
 }
 
@@ -109,7 +137,7 @@ function newWaypoint(Player, Name, Pos, Dim, Colour, ShowPlayer, Editable)
     .setEditable(Editable);
     // Add new waypoint to registry
     var savedWaypointRegistry = JSON.parse(Player.getStoreddata().get("Waypoints"));
-    savedWaypointRegistry[newWaypoint.getId()] = {"WaypointJSON": newWaypoint.toJSON(), "isHidden":!ShowPlayer, "ActualPos":[Pos.getX(), Pos.getY(), Pos.getZ()], "ActualName":Name};
+    savedWaypointRegistry[newWaypoint.getId()] = {"WaypointJSON": newWaypoint.toJSON(), "isHidden":!ShowPlayer, "ActualPos":[Pos.getX(), Pos.getY(), Pos.getZ()], "ActualName":Name, "Dim":Dim, "Editable":Editable, "Colour":Colour};
     var waypointRegistry = Player.getTempdata().get("Waypoints");
     waypointRegistry[newWaypoint.getId()] = newWaypoint;
     Player.getStoreddata().put("Waypoints", JSON.stringify(savedWaypointRegistry));
@@ -142,16 +170,28 @@ function setVisible(Player, Id, Visible)
         {
             // Set Waypoint to visible
             log("[INFO] JMWaypointHandler.setVisible(): Setting Waypoint " + savedWaypointRegistry[Id]["ActualName"] + " to Visible!");
-            var Waypoint = ScriptedWaypoint.fromJSON(savedWaypointRegistry[Id]["WaypointJSON"]);
-            Waypoint.show(Player);
-
-            // Update registry
-            savedWaypointRegistry[Id]["isHidden"] = false;
-            savedWaypointRegistry[Id]["WaypointJSON"] = Waypoint.toJSON();
-            waypointRegistry[Id] = Waypoint;
-            // Write
-            Player.getStoreddata().put("Waypoints", JSON.stringify(savedWaypointRegistry));
-            Player.getTempdata().put("Waypoints", waypointRegistry);
+            var isSinglePlayer = Player.world.getMCWorld().func_73046_m().func_71264_H(); // func_73046_m() = getMinecraftServer(), func_71264_H() = isSinglePlayer()
+            if(isSinglePlayer)
+            {
+                var Waypoint = ScriptedWaypoint.fromJSON(savedWaypointRegistry[Id]["WaypointJSON"]);
+                Waypoint.show(Player);
+                // Update registry
+                savedWaypointRegistry[Id]["isHidden"] = false;
+                savedWaypointRegistry[Id]["WaypointJSON"] = Waypoint.toJSON();
+                waypointRegistry[Id] = Waypoint;
+                // Write
+                Player.getStoreddata().put("Waypoints", JSON.stringify(savedWaypointRegistry));
+                Player.getTempdata().put("Waypoints", waypointRegistry);
+            }
+            else
+            {
+                var oldPoint = savedWaypointRegistry[Id];
+                var pos = Player.world.getBlock(oldPoint["ActualPos"][0], oldPoint["ActualPos"][1], oldPoint["ActualPos"][2]).getPos();
+                newWaypoint(Player, oldPoint["ActualName"], pos, oldPoint["Dim"], oldPoint["Colour"], true, oldPoint["Editable"]);
+                savedWaypointRegistry = JSON.parse(Player.getStoreddata().get("Waypoints"));
+                delete savedWaypointRegistry[Id];
+                Player.getStoreddata().put("Waypoints", JSON.stringify(savedWaypointRegistry));
+            }
         }
         else if(Visible == false && typeof(Visible) == typeof(false))
         {
@@ -216,39 +256,76 @@ function updateWaypoint(Player, Id, NewValues)
                 // Values are the right types, proceed
                 var savedWaypointRegistry = JSON.parse(Player.getStoreddata().get("Waypoints"));
                 var waypointRegistry = Player.getTempdata().get("Waypoints");
-
+                var isSinglePlayer = Player.world.getMCWorld().func_73046_m().func_71264_H(); // func_73046_m() = getMinecraftServer(), func_71264_H() = isSinglePlayer()
                 // Does Waypoint exist?
                 if(Object.keys(savedWaypointRegistry).indexOf(Id) >= 0)
                 {
-                    var waypointInfo = savedWaypointRegistry[Id];
-                    var tempPoint = ScriptedWaypoint.fromJSON(waypointInfo["WaypointJSON"]);
-
-                    var toUpdate = Object.keys(NewValues);
-                    if(toUpdate.indexOf("Name") >= 0){var Name = NewValues["Name"];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Name for: " + Id);}else{var Name = tempPoint.getName();log("[INFO] JMWaypointHandler.updateWaypoint(): No Name change for: " + Id);}
-                    if(toUpdate.indexOf("Pos") >= 0){var Pos = NpcAPI.getIPos(NewValues["Pos"][0], NewValues["Pos"][1], NewValues["Pos"][2]);log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Pos for: " + Id);}else{var Pos = tempPoint.getPos();log("[INFO] JMWaypointHandler.updateWaypoint(): No Pos change for: " + Id);}
-                    if(toUpdate.indexOf("Dim") >= 0){var Dim = NewValues["Dim"];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Dim for: " + Id);}else{var Dim = tempPoint.getDimension();log("[INFO] JMWaypointHandler.updateWaypoint(): No Dim change for: " + Id);}
-                    if(toUpdate.indexOf("Colour") >= 0){var Colour = NewValues["Colour"];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Colour for: " + Id);}else{var Colour = tempPoint.getColors();log("[INFO] JMWaypointHandler.updateWaypoint(): No Colour change for: " + Id);}
-                    if(toUpdate.indexOf("Editable") >= 0){var Editable = NewValues["Editable"];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Editable for: " + Id);}else{var Editable = tempPoint.isEditable();log("[INFO] JMWaypointHandler.updateWaypoint(): No Editable change for: " + Id);}
-                    var updatedWaypoint = new ScriptedWaypoint(Pos, Dim)
-                    .setName(Name)
-                    .setColor(Colour[0], Colour[1], Colour[2])
-                    .setEditable(Editable);
-
-                    // Save updated Waypoint
-                    savedWaypointRegistry[Id]["WaypointJSON"] = updatedWaypoint.toJSON();
-                    Player.getStoreddata().put("Waypoints", JSON.stringify(savedWaypointRegistry));
-
-                    if(!waypointInfo["isHidden"])
+                    if(isSinglePlayer)
                     {
-                        // Waypoint is Visible update player
-                        var oldWaypoint = waypointRegistry[Id];
-                        oldWaypoint.remove(Player);
-                        waypointRegistry[Id] = updatedWaypoint;
-                        updatedWaypoint.show(Player);
-                        Player.getTempdata().put("Waypoints", waypointRegistry);
-                    }
+                        var waypointInfo = savedWaypointRegistry[Id];
+                        var tempPoint = ScriptedWaypoint.fromJSON(waypointInfo["WaypointJSON"]);
 
-                    wasUpdated = true;
+                        var toUpdate = Object.keys(NewValues);
+                        if(toUpdate.indexOf("Name") >= 0){var Name = NewValues["Name"];savedWaypointRegistry[Id]["ActualName"] = Name;log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Name for: " + Id);}else{var Name = tempPoint.getName();log("[INFO] JMWaypointHandler.updateWaypoint(): No Name change for: " + Id);}
+                        if(toUpdate.indexOf("Pos") >= 0){var Pos = NpcAPI.getIPos(NewValues["Pos"][0], NewValues["Pos"][1], NewValues["Pos"][2]);savedWaypointRegistry[Id]["ActualPos"] = [Pos.getX(), Pos.getY(), Pos.getZ()];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Pos for: " + Id);}else{var Pos = tempPoint.getPos();log("[INFO] JMWaypointHandler.updateWaypoint(): No Pos change for: " + Id);}
+                        if(toUpdate.indexOf("Dim") >= 0){var Dim = NewValues["Dim"];savedWaypointRegistry[Id]["Dim"] = Dim;log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Dim for: " + Id);}else{var Dim = tempPoint.getDimension();log("[INFO] JMWaypointHandler.updateWaypoint(): No Dim change for: " + Id);}
+                        if(toUpdate.indexOf("Colour") >= 0){var Colour = NewValues["Colour"];savedWaypointRegistry[Id]["Colour"] = Colour;log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Colour for: " + Id);}else{var Colour = tempPoint.getColors();log("[INFO] JMWaypointHandler.updateWaypoint(): No Colour change for: " + Id);}
+                        if(toUpdate.indexOf("Editable") >= 0){var Editable = NewValues["Editable"];savedWaypointRegistry[Id]["Editable"] = Editable;log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Editable for: " + Id);}else{var Editable = tempPoint.isEditable();log("[INFO] JMWaypointHandler.updateWaypoint(): No Editable change for: " + Id);}
+                        var updatedWaypoint = new ScriptedWaypoint(Pos, Dim)
+                        .setName(Name)
+                        .setColor(Colour[0], Colour[1], Colour[2])
+                        .setEditable(Editable);
+
+                        // Save updated Waypoint
+                        savedWaypointRegistry[Id]["WaypointJSON"] = updatedWaypoint.toJSON();
+                        Player.getStoreddata().put("Waypoints", JSON.stringify(savedWaypointRegistry));
+
+                        if(!waypointInfo["isHidden"])
+                        {
+                            // Waypoint is Visible update player
+                            var oldWaypoint = waypointRegistry[Id];
+                            oldWaypoint.remove(Player);
+                            waypointRegistry[Id] = updatedWaypoint;
+                            updatedWaypoint.show(Player);
+                            Player.getTempdata().put("Waypoints", waypointRegistry);
+                        }
+
+                        wasUpdated = true;
+                    }
+                    else
+                    {
+                        // Server, need to do some sad stuff
+                        var waypointInfo = savedWaypointRegistry[Id];
+
+                        var toUpdate = Object.keys(NewValues);
+                        var visibleState = true;
+                        if(toUpdate.indexOf("Name") >= 0){waypointInfo["ActualName"] = NewValues["Name"];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Name for: " + Id);}else{log("[INFO] JMWaypointHandler.updateWaypoint(): No Name change for: " + Id);}
+                        if(toUpdate.indexOf("Pos") >= 0){waypointInfo["ActualPos"] = NewValues["Pos"];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Pos for: " + Id);}else{log("[INFO] JMWaypointHandler.updateWaypoint(): No Pos change for: " + Id);}
+                        if(toUpdate.indexOf("Dim") >= 0){waypointInfo["Dim"] = NewValues["Dim"];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Dim for: " + Id);}else{log("[INFO] JMWaypointHandler.updateWaypoint(): No Dim change for: " + Id);}
+                        if(toUpdate.indexOf("Colour") >= 0){waypointInfo["Colour"] = NewValues["Colour"];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Colour for: " + Id);}else{log("[INFO] JMWaypointHandler.updateWaypoint(): No Colour change for: " + Id);}
+                        if(toUpdate.indexOf("Editable") >= 0){waypointInfo["Editable"] = NewValues["Editable"];log("[INFO] JMWaypointHandler.updateWaypoint(): Updating Editable for: " + Id);}else{log("[INFO] JMWaypointHandler.updateWaypoint(): No Editable change for: " + Id);}
+                        if(toUpdate.indexOf("ShowPlayer") >= 0){visibleState = NewValues["ShowPlayer"];}
+                        if(toUpdate.indexOf("isHidden") >= 0){visibleState = NewValues["isHidden"];}
+
+                        // Remove old point
+                        if(!waypointInfo["isHidden"])
+                        {
+                            waypointRegistry = Player.getTempdata().get("Waypoints");
+                            var Waypoint = waypointRegistry[Id];
+                            Waypoint.remove(Player);
+                            delete waypointRegistry[Id]; // Removed from the loaded list
+                            // Save
+                            Player.getTempdata().put("Waypoints", waypointRegistry);
+                        }
+
+                        var pos = Player.world.getBlock(waypointInfo["ActualPos"][0], waypointInfo["ActualPos"][1], waypointInfo["ActualPos"][2]).getPos();
+                        newWaypoint(Player, waypointInfo.ActualName, pos, waypointInfo.Dim, waypointInfo.Colour, visibleState);
+                        savedWaypointRegistry = JSON.parse(Player.getStoreddata().get("Waypoints"));
+                        delete savedWaypointRegistry[Id]; // Removed from saved list
+                        Player.getStoreddata().put("Waypoints", JSON.stringify(savedWaypointRegistry));
+
+                        wasUpdated = true;
+                    }
                 }
                 else{log("[ERR] JMWaypointHandler.updateWaypoint(): Could not find a Waypoint with Id: " + Id);}
             }
@@ -265,22 +342,13 @@ function updateWaypoint(Player, Id, NewValues)
  */
 function reloadWaypoints(Player)
 {
-    var savedWaypointRegistry = JSON.parse(Player.getStoreddata().get("Waypoints"));
-    var waypointRegistry = {};
     // Remove all currently loaded Waypoints
     var oldWaypointRegistry = Player.getTempdata().get("Waypoints");
     for(var i = 0; i < Object.keys(oldWaypointRegistry).length; i++)
     {
         oldWaypointRegistry[Object.keys(oldWaypointRegistry)[i]].remove(Player);
     }
-    // Add Waypoints from Storeddata
-    for(var i = 0; i < Object.keys(savedWaypointRegistry).length; i++)
-    {
-        var existingPoint = ScriptedWaypoint.fromJSON(savedWaypointRegistry[Object.keys(savedWaypointRegistry)[i]]["WaypointJSON"]);
-        if(!(savedWaypointRegistry[Object.keys(savedWaypointRegistry)[i]]["isHidden"])){existingPoint.show(Player);}
-        waypointRegistry[Object.keys(savedWaypointRegistry)[i]] = existingPoint;
-    }
-    Player.getTempdata().put("Waypoints", waypointRegistry);
+    loadWaypoints(Player);
 }
 
 /** Deletes a Waypoint and removes it from the world if loaded
