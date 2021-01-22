@@ -23,24 +23,15 @@ These files are not feature complete but have working features that can be used.
 	- Remove dependence on commandblocks
 	- Easier install
 	- Better random teleport of horse
-- Roads
+- Roads (Currently being updated to new version)
 	
+	Please avoid using this for now as a MUCH better version is comming later. New vesion includes the Road Creation tool that allows the easy creation and debuging of the road network.
 	Allows for the creation of road networks that NPCs will use to travel from location to location. This is really a visual thing but I think it looks better when NPCs actually travel along the roads. 
 	Also it enables traveling greater distances than would be possible otherwise.
 	
-	Currently there's only 1 type of node and you have to input all information into each one manually which can be a pain/time consuming. [Current version in action](https://youtu.be/kMauBoDGFyk)
+	 [Old version in action](https://youtu.be/kMauBoDGFyk)(New version will look similar but be 1000x easier to set up)
 	
-	Planned:
-	- 4 Types of node
-		1. Start/End        (Location/arrival)
-		2. Nav              (Between start and end nodes)
-		3. Greater Nav      (Between two cities)
-		4. City Entry/Exit  (Marks arrivial/departure from a city)
-		5. Decision Node    (Also could be called "itersection node", directs the NPC down the correct road and corrects the path if the NPC went the wrong way)
-	- More intuative method for learning neighbours (who is next in line and previous if backtracking enabled)
-	- Where it is, ie. in a City or between two Cities
-	- Ensure that the block can only be destroyed by a player in creative mode and no other means
-	- Remove dependency on Jsonified by Baito (it works great but I know how to use files now)
+	
 - Player like inventories for NPCs
 
 	Adds a player-like inventory to the NPC, using files while I figure some things out
