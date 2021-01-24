@@ -9,7 +9,7 @@ Changes in V1.02: Fixed waypoints re-loading on servers due to a bug in Scripted
     - Every time a waypoint is loaded/reloaded it will get a new ID, so always use getWaypoints() to get the ID before doing anything with waypoints.
     - This script will now only ever work on 1.12 because it uses obfuscated methods
 I have also updated the reloadWaypoints(), newWaypoint(), updateWaypoint() and setVisible() functions to work in multiplayer
-Changes in V1.0.3: Fixed a bug where the script couldn't load waypoint data into storeddata on relog
+Changes in V1.0.3: Fixed a bug where the script couldn't load waypoint data into tempdata on relog
 
 About:
 Allows for the creation, modification and deletion of waypoints in Journeymap.
