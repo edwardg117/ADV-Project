@@ -1,14 +1,15 @@
 /*
-Journeymap Waypoint Handler/Manager V1.02 by edwardg
+Journeymap Waypoint Handler/Manager V1.03 by edwardg
 Uses ScriptedJourneyMap v1.1.0 beta by slava_110 https://cdn.discordapp.com/attachments/372544887914233857/720758455215980564/ScriptedJourneyMap-1.1.0-beta.jar
 Written for Journeymap version 1.12.2-5.7.1
 Journeymap API Version: v1.12-1.4
 Huge thanks to Runon and slava_110 for their help and suggestions.
 Changes in V1.01: None, just updating the link to a jar that works on servers.
-Changes in V1.02: Fixed waypoints re-loading on servers due to a bug in ScriptedJourneyMap. It's just a workaround but it will introduce some quirkyness:
+Changes in V1.02: Fixed waypoints re-loading on servers due to a bug in ScriptedJourneyMap. It's just a workaround and it will introduce some quirkyness:
     - Every time a waypoint is loaded/reloaded it will get a new ID, so always use getWaypoints() to get the ID before doing anything with waypoints.
     - This script will now only ever work on 1.12 because it uses obfuscated methods
 I have also updated the reloadWaypoints(), newWaypoint(), updateWaypoint() and setVisible() functions to work in multiplayer
+Changes in V1.0.3: Fixed a bug where the script couldn't load waypoint data into storeddata on relog
 
 About:
 Allows for the creation, modification and deletion of waypoints in Journeymap.
@@ -55,6 +56,7 @@ function init(event)
     }
     else
     {
+        player.getTempdata().put("Waypoints", {}); // Need to load an empty object now
         // Are there Waypoints load?
         if(player.getStoreddata().get("Waypoints"))
         {
@@ -66,7 +68,6 @@ function init(event)
         {
             log("[INFO] JMWaypointHandler.init(): There's no Waypoint data at all, creating an empty registry.");
             player.getStoreddata().put("Waypoints", "{}"); // Ensure it looks nice for when some are added
-            player.getTempdata().put("Waypoints", {});
         }
     }
 }
