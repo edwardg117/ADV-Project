@@ -59,50 +59,82 @@ var defaultSettings = {
     "autoUpdateFile": true // Should the saved file be updated upon every node's creation?
 };
 
-var GUI = { // NodeType_TypeName eg L_FName is Location_TextFieldName 
-    "L_Title":1,
-    "L_FName":2,
-    "L_LName":3,
-    "L_FCity":4,
-    "L_LCity":5,
-    "L_SCityList":6,
-    "L_LLocation":7,
-    "L_LCords":8,
-    "L_BCancel":9,
-    "L_BSave":10,
+var guiComponentList = [ // NodeType_TypeName eg L_FName is Location_TextFieldName 
+    "L_Title", // Location placing GUI
+    "L_FName",
+    "L_LName",
+    "L_FCity",
+    "L_LCity",
+    "L_SCityList",
+    "L_LLocation",
+    "L_LCords",
+    "L_BCancel",
+    "L_BSave",
 
-    "G_LTitle":11,
-    "G_LCity":12,
-    "G_FCity":13,
-    "G_SCityList":14,
-    "G_LType":15,
-    "G_BChangeType":16,
-    "G_LLocation":27,
-    "G_LCords":28,
-    "G_BCancel":17,
-    "G_BSave":18,
+    "G_LTitle", // Gate placing GUI
+    "G_LCity",
+    "G_FCity",
+    "G_SCityList",
+    "G_LType",
+    "G_BChangeType",
+    "G_LLocation",
+    "G_LCords",
+    "G_BCancel",
+    "G_BSave",
 
-    "S_LTitle":19,
-    "S_LBacktrack":20,
-    "S_BBacktrack":21,
-    "S_LRegistryLock":22,
-    "S_BRegistryLock":23,
-    "S_LAutoSave":24,
-    "S_BAutosave":25,
-    "S_BSaveNow":26,
-    "S_LFileOps":29,
-    "S_BOverwriteRegistry":30,
-    "S_BImportMapData":31,
-    "S_BClearRegistry":32,
-    "S_LOther":33,
-    "S_BClearPrevNode":34,
-    "S_BResetSettings":35,
-    "S_BClose":36,
-    "S_LMode":37,
-    "S_SModeList":38,
-    "S_BConfirm":39,
-    "S_BCancel":40
-}
+    "S_LTitle", // Settungs menu GUI
+    "S_LBacktrack",
+    "S_BBacktrack",
+    "S_LRegistryLock",
+    "S_BRegistryLock",
+    "S_LAutoSave",
+    "S_BAutosave",
+    "S_BSaveNow",
+    "S_LFileOps",
+    "S_BOverwriteRegistry",
+    "S_BImportMapData",
+    "S_BClearRegistry",
+    "S_LOther",
+    "S_BClearPrevNode",
+    "S_BResetSettings",
+    "S_BClose",
+    "S_LMode",
+    "S_SModeList",
+    "S_BConfirm",
+    "S_BCancel",
+    "S_ClearRegistryConfirmation",
+    "S_OverwriteRegistryConfirmation",
+
+    "E_LTitle", // Editing menu GUI
+    "E_LSubtitle",
+    "E_LName",
+    "E_FName",
+    "E_LCity",
+    "E_FCity",
+    "E_SCityList",
+    "E_LLocation",
+    "E_LCords",
+    "E_BEditNeighbours",//
+    "E_BDeleteNode",//
+    "E_BClose",//
+    "E_BSave",//
+    "E_BConfirm",
+    "E_BCancel",//
+    "E_DeleteNodeConfirmation",
+    "E_DeleteNeighbourConfirmation",
+
+    "EN_LNeighbours", // Editing neighbours GUI
+    "EN_LInfo",
+    "EN_SNeighbourList",
+    "EN_LNeighbourLocation",
+    "EN_LNeighbourCity",
+    "EN_LisNeigbour",
+    "EN_BRemoveNeighbour",//
+    "EN_BClose",//
+    "EN_BBack"//
+];
+
+var GUI = enumerate(guiComponentList, 1);
 
 function init(event)
 {
@@ -228,6 +260,16 @@ function attack(event)
                 event.item.getTempdata().put("settings", settings); // Save new mode
                 event.item.getStoreddata().put("savedSettings", JSON.stringify(settings));
                 updateItemDesc(event.item, settings.mode);
+                // Remove analysis stuff
+                if(event.item.getStoreddata().get("AnalysisSelectedNode"))
+                {
+                    var npcList = event.player.world.getNearbyEntities(event.player.getPos(), 34, 2);
+                    for(var i = 0; i<npcList.length; i++)
+                    {
+                        if(npcList[i].hasTag("RoadsAnalysisWalker")){npcList[i].despawn();}
+                    }
+                }
+                event.item.getStoreddata().put("AnalysisSelectedNode", "");
             }
             else{openSettingsGUI(event, event.item);}
             break;
@@ -280,7 +322,7 @@ function attack(event)
                                 var registry = event.player.world.getTempdata().get("NodeRegistry"); // Get node registry
                                 var settings = event.item.getTempdata().get("settings");
                                 // Setting node as neighbour
-                                updateRefsAndNeighbours(event.player, registry, settings, prevNode, blockInfo, pos);
+                                updateRefsAndNeighbours(event.player, registry, settings, prevNode, blockInfo, block.getPos());
                                 // This is now the previous Node
                                 event.item.getTempdata().put("prevNode", blockInfo);
                                 event.player.message("Set Node " + blockInfo["Name"] + " as a neighbour of " + prevNode["Name"]);
@@ -304,13 +346,13 @@ function attack(event)
                     }else{event.player.message("No Type for scripted block");if(event.player.isSneaking()){placeBlock(event.player, pos, "Intersection");}else{placeBlock(event.player, pos, "Node");}}
                 }else{event.player.message("No about for scripted block");if(event.player.isSneaking()){placeBlock(event.player, pos, "Intersection");}else{placeBlock(event.player, pos, "Node");}}
             }
-            else if(currentMode == "Editing") // TODO Editing mode
+            else if(currentMode == "Editing")
             {
-                event.player.message("Write code to edit nodes here!");
+                openEditGUI(event, pos.subtract(0,1,0));
             }
-            else if(currentMode == "Analysis") // TODO Analysis mode
+            else if(currentMode == "Analysis")
             {
-                event.player.message("Write code for analysis here!");
+                analysisMode(event, pos.subtract(0,1,0));
             }
             else
             {
@@ -441,23 +483,26 @@ function placeBlock(Player, Pos, Type, Gui)
 }
 function updateRefsAndNeighbours(Player, registry, settings, prevNode, nextNode, nextNodePos)
 {
-    // Add node as a refrence
-    // Update new node first
-    if(nextNode.Type == "Node"){registry["Nodes"][nextNode.Name]["Refs"].push([prevNode.Name, prevNode.City]);} // [Referenced by, City of node]
-    else if(nextNode.Type == "Location"){registry["Cities"][nextNode.City]["Locations"][nextNode.Name]["Refs"].push([prevNode.Name, prevNode.City]);}
-    else{registry["Cities"][nextNode.City]["Gates"][nextNode.Name]["Refs"].push([prevNode.Name, prevNode.City]);}
-    // Find distance
-    if(prevNode.Type == "Node"){var pPos = registry["Nodes"][prevNode.Name]["Pos"];}
-    else if(prevNode.Type == "Location"){var pPos = registry["Cities"][prevNode.City]["Locations"][prevNode.Name]["Pos"];}
-    else{var pPos = registry["Cities"][prevNode.City]["Gates"][prevNode.Name]["Pos"];}
-    var neighbourPos = Player.world.getBlock(pPos[0], pPos[1], pPos[2]).getPos();
-    var distance = nextNodePos.distanceTo(neighbourPos);
-    // Update neighbour in previous node
-    if(prevNode.Type == "Node"){registry["Nodes"][prevNode.Name]["Neighbours"].push([nextNode.Name, distance]);}
-    else if(prevNode.Type == "Location"){registry["Cities"][prevNode.City]["Locations"][prevNode.Name]["Neighbours"].push([nextNode.Name, distance]);}
-    else{registry["Cities"][prevNode.City]["Gates"][prevNode.Name]["Neighbours"].push([nextNode.Name, distance]);}
-
-    if(settings.allowBacktrack)
+    // Check to see if it's already neighbours
+    if(!isAlreadyNeighbour(registry, prevNode, nextNode))
+    {
+        // Add node as a refrence
+        // Update new node first
+        if(nextNode.Type == "Node"){registry["Nodes"][nextNode.Name]["Refs"].push([prevNode.Name, prevNode.City]);} // [Referenced by, City of node]
+        else if(nextNode.Type == "Location"){registry["Cities"][nextNode.City]["Locations"][nextNode.Name]["Refs"].push([prevNode.Name, prevNode.City]);}
+        else{registry["Cities"][nextNode.City]["Gates"][nextNode.Name]["Refs"].push([prevNode.Name, prevNode.City]);}
+        // Find distance
+        if(prevNode.Type == "Node"){var pPos = registry["Nodes"][prevNode.Name]["Pos"];}
+        else if(prevNode.Type == "Location"){var pPos = registry["Cities"][prevNode.City]["Locations"][prevNode.Name]["Pos"];}
+        else{var pPos = registry["Cities"][prevNode.City]["Gates"][prevNode.Name]["Pos"];}
+        var neighbourPos = Player.world.getBlock(pPos[0], pPos[1], pPos[2]).getPos();
+        var distance = nextNodePos.distanceTo(neighbourPos);
+        // Update neighbour in previous node
+        if(prevNode.Type == "Node"){registry["Nodes"][prevNode.Name]["Neighbours"].push([nextNode.Name, distance, nextNode.City]);}
+        else if(prevNode.Type == "Location"){registry["Cities"][prevNode.City]["Locations"][prevNode.Name]["Neighbours"].push([nextNode.Name, distance, nextNode.City]);}
+        else{registry["Cities"][prevNode.City]["Gates"][prevNode.Name]["Neighbours"].push([nextNode.Name, distance, nextNode.City]);}
+    }
+    if(settings.allowBacktrack && !isAlreadyNeighbour(registry, nextNode, prevNode))
     { // The previous node should be a neighbour of this node too
         // Update previous node first
         Player.message("Backtracking enabled")
@@ -465,11 +510,28 @@ function updateRefsAndNeighbours(Player, registry, settings, prevNode, nextNode,
         else if(prevNode.Type == "Location"){registry["Cities"][prevNode.City]["Locations"][prevNode.Name]["Refs"].push([nextNode.Name, nextNode.City]);}
         else{registry["Cities"][prevNode.City]["Gates"][prevNode.Name]["Refs"].push([nextNode.Name, nextNode.City]);}
         // Update new node now
-        if(nextNode.Type == "Node"){registry["Nodes"][nextNode.Name]["Neighbours"].push([prevNode.Name, distance]);}
-        else if(nextNode.Type == "Location"){registry["Cities"][nextNode.City]["Locations"][nextNode.Name]["Neighbours"].push([prevNode.Name, distance]);}
-        else{registry["Cities"][nextNode.City]["Gates"][nextNode.Name]["Neighbours"].push([prevNode.Name, distance]);}
+        if(nextNode.Type == "Node"){registry["Nodes"][nextNode.Name]["Neighbours"].push([prevNode.Name, distance, prevNode.City]);}
+        else if(nextNode.Type == "Location"){registry["Cities"][nextNode.City]["Locations"][nextNode.Name]["Neighbours"].push([prevNode.Name, distance, prevNode.City]);}
+        else{registry["Cities"][nextNode.City]["Gates"][nextNode.Name]["Neighbours"].push([prevNode.Name, distance, prevNode.City]);}
     }
     return registry;
+}
+
+function isAlreadyNeighbour(registry, fromNode, toNode) // to prevent duplicate neighbours
+{
+    var isNeighbour = false;
+    if(toNode.Type == "Node"){var neighbours = registry["Nodes"][toNode.Name]["Refs"];}
+    else if(toNode.Type == "Location"){var neighbours = registry["Cities"][toNode.City]["Locations"][toNode.Name]["Refs"];}
+    else{var neighbours = registry["Cities"][toNode.City]["Gates"][toNode.Name]["Refs"];}
+    for(var i = 0; i < neighbours.length; i++)
+    {
+        if(neighbours[i][0] == fromNode.Name && neighbours[i][1] == fromNode.City)
+        {
+            isNeighbour = true;
+            break;
+        }
+    }
+    return isNeighbour;
 }
 
 'Scripts:[{Script:"var test = true;",Console:[],ScriptList:[]}]'
@@ -550,7 +612,7 @@ function openSettingsGUI(event, tool)
     gui.addButton(GUI.S_BAutosave, function(val){if(val){return "§2"+val}else{return "§4"+val}}(settings.autoUpdateFile), 80 ,80, 50, 20).setHoverText("Should the registry file be updated after every new node?\nDisable for larger networks and save manually.");
     gui.addLabel(GUI.S_LMode, "Mode", 40, 105, 70, 20);
     var modeList = Object.keys(modeInfo);
-    gui.addScroll(GUI.S_SModeList, 10, 120, 100, 80, modeList).setDefaultSelection​(modeList.indexOf(settings.mode));
+    gui.addScroll(GUI.S_SModeList, 10, 120, 100, 80, modeList).setDefaultSelection(modeList.indexOf(settings.mode));
 
     gui.addLabel(GUI.S_LFileOps, "File Operations", 170, 40, 70, 20);
     gui.addButton(GUI.S_BSaveNow, "Write Now", 136, 60, 54, 20).setHoverText("All data is saved in game.\nThis button saves the data to the external file for processing.");
@@ -567,14 +629,239 @@ function openSettingsGUI(event, tool)
     event.player.showCustomGui(gui);
 }
 
-function editMode(event, Pos) // Manipulation of existing nodes
+function openEditGUI(event, Pos) // Manipulation of existing nodes // TODO Editing mode
 {
-    return null;
+    var tool = event.player.getMainhandItem();
+    var selectedNode = event.player.world.getBlock(Pos.getX(), Pos.getY(), Pos.getZ());
+    var aboutNode = JSON.parse(selectedNode.getStoreddata().get("about"));
+    if(!aboutNode){return null;}
+    //event.player.message("Selected: " + aboutNode.Name);
+    // Find node in registry
+    var registry = event.player.world.getTempdata().get("NodeRegistry");
+    if(aboutNode.City)
+    {
+        if(aboutNode.Type === "Location"){var nodeData = registry["Cities"][aboutNode.City]["Locations"][aboutNode.Name];}
+        else if(aboutNode.Type === "Gate"){var nodeData = registry["Cities"][aboutNode.City]["Gates"][aboutNode.Name];}
+        else{event.player.message("Node has City but isn't a Location or Gate!!");}
+    }
+    else{var nodeData = registry["Nodes"][aboutNode.Name];}
+
+    //event.player.message("Neighbours: " + JSON.stringify(nodeData.Neighbours));
+
+    var pauseGame = true;
+    var gui = event.API.createCustomGui(0, 256, 256, pauseGame);
+    gui.setBackgroundTexture("customnpcs:textures/gui/bgfilled.png");
+
+    gui.addLabel(GUI.E_LTitle, "Editing: §6" + aboutNode.Name, 10, 10, 240, 1);
+    gui.addLabel(GUI.E_LSubtitle, "Type: " + aboutNode.Type, 10, 20, 240, 1);
+
+    gui.addLabel(GUI.ELName, "Name", 10, 30, 30, 10);
+    gui.addTextField(GUI.E_FName, 40, 30, 100, 10).setText(aboutNode.Name);
+    if(aboutNode.Type == "Node")
+    {
+        gui.addLabel(GUI.E_LCity, "Type", 10, 50, 30, 10);
+        if(nodeData.isIntersection){gui.addLabel(GUI.E_FCity, "Intersection", 40, 50, 30, 10);}
+        else{gui.addLabel(GUI.E_FCity, "Node", 40, 50, 30, 10);}
+    }
+    else
+    {
+        gui.addLabel(GUI.E_LCity, "City", 10, 50, 30, 10);
+        gui.addTextField(GUI.E_FCity, 40, 50, 100, 10).setText(aboutNode.City);
+        var registry = event.player.world.getTempdata().get("NodeRegistry"); // Get node registry
+        var cityList = Object.keys(registry["Cities"]);
+        gui.addScroll(GUI.E_SCityList, 40, 60, 100, 50, cityList);
+    }
+    gui.addLabel(GUI.E_LLocation, "Location", 5, 120, 45, 10);
+    gui.addLabel(GUI.E_LCords, "X:"+Pos.getX()+" Y:"+Pos.getY()+" Z:"+Pos.getZ(), 50, 120, 250, 10);
+
+    gui.addButton(GUI.E_BEditNeighbours, "Edit Neighbours", 20, 140, 100, 20);
+    gui.addButton(GUI.E_BDeleteNode, "Delete Node", 136, 140, 100, 20);
+
+    gui.addButton(GUI.E_BCancel,"Cancel", 30, 200, 50, 20);
+    gui.addButton(GUI.E_BSave,"Save", 150, 200, 50, 20);
+
+    tool.getTempdata().put("Focussed Node", aboutNode);
+
+    event.player.showCustomGui(gui);
+
+}
+
+function openEditNeighbourGUI(event, Pos) // TODO Edit Neighbours
+{
+    var selectedNode = event.player.world.getBlock(Pos.getX(), Pos.getY(), Pos.getZ());
+    var aboutNode = JSON.parse(selectedNode.getStoreddata().get("about"));
+    if(!aboutNode){return null;}
+    //event.player.message("Selected: " + aboutNode.Name);
+    // Find node in registry
+    var registry = event.player.world.getTempdata().get("NodeRegistry");
+    if(aboutNode.City)
+    {
+        if(aboutNode.Type === "Location"){var nodeData = registry["Cities"][aboutNode.City]["Locations"][aboutNode.Name];}
+        else if(aboutNode.Type === "Gate"){var nodeData = registry["Cities"][aboutNode.City]["Gates"][aboutNode.Name];}
+        else{event.player.message("Node has City but isn't a Location or Gate!!");}
+    }
+    else{var nodeData = registry["Nodes"][aboutNode.Name];}
+
+    //event.player.message("Neighbours: " + JSON.stringify(nodeData.Neighbours));
+
+    var pauseGame = true;
+    var gui = event.API.createCustomGui(0, 256, 256, pauseGame);
+    gui.setBackgroundTexture("customnpcs:textures/gui/bgfilled.png");
+
+    gui.addLabel(GUI.E_LTitle, "Editing: §6" + aboutNode.Name, 10, 10, 240, 1);
+    gui.addLabel(GUI.E_LSubtitle, "Type: " + aboutNode.Type, 10, 20, 240, 1);
+
+    gui.addLabel(GUI.EN_LNeighbours, "Neighbours", 30, 40, 60, 10);
+    gui.addLabel(GUI.EN_LInfo, "Info", 160, 40, 30, 10);
+    
+    var neighbourList = [];
+    for(var i = 0; i < nodeData.Neighbours.length; i++)
+    {
+        neighbourList.push(nodeData.Neighbours[i][0]);
+    }
+    gui.addScroll(GUI.EN_SNeighbourList, 10, 60, 100, 50, neighbourList);
+
+    gui.addButton(GUI.EN_BClose,"Close", 30, 200, 50, 20);
+    gui.addButton(GUI.EN_BBack,"Back", 150, 200, 50, 20);
+
+    event.player.showCustomGui(gui);
 }
 
 function analysisMode(event, Pos) // Help debug issues
 {
-    return null;
+    if(event.item.getStoreddata().get("AnalysisSelectedNode"))
+    {
+        var npcList = event.player.world.getNearbyEntities(Pos, 34, 2);
+        for(var i = 0; i<npcList.length; i++)
+        {
+            if(npcList[i].hasTag("RoadsAnalysisWalker")){npcList[i].despawn();}
+        }
+    }
+    var selectedNode = event.player.world.getBlock(Pos.getX(), Pos.getY(), Pos.getZ());
+    var aboutNode = JSON.parse(selectedNode.getStoreddata().get("about"));
+    if(!aboutNode){return null;}
+    event.item.getStoreddata().put("AnalysisSelectedNode", aboutNode.Name);
+    event.player.message("Selected: " + aboutNode.Name);
+    // Find node in registry
+    var registry = event.player.world.getTempdata().get("NodeRegistry");
+    if(aboutNode.City)
+    {
+        if(aboutNode.Type === "Location"){var nodeData = registry["Cities"][aboutNode.City]["Locations"][aboutNode.Name];}
+        else if(about.Type === "Gate"){var nodeData = registry["Cities"][aboutNode.City]["Gates"][aboutNode.Name];}
+        else{event.player.message("Node has City but isn't a Location or Gate!!");}
+    }
+    else{var nodeData = registry["Nodes"][aboutNode.Name];}
+
+    event.player.message("Neighbours: " + JSON.stringify(nodeData.Neighbours));
+    event.player.message("Refrenced By: " + JSON.stringify(nodeData.Refs));
+
+    // Walkers
+    for(var i = 0; i < nodeData.Neighbours.length; i++)
+    {
+        var neighbourName = nodeData.Neighbours[i][0];
+        if(/^n\d*$/.test(neighbourName))
+        { // It's a node
+            var neighbourData = registry.Nodes[neighbourName];
+        }
+        else if(/^G\d*$/.test(neighbourName))
+        { // Is gate
+            var Cities = Object.keys(registry.Cities);
+            for(var i=0; i < Cities.length; i++)
+            {
+                if(registry.Cities[Cities[i]]["Gates"].hasOwnProperty(neighbourName))
+                {
+                    var neighbourData = registry.Cities[Cities[i]]["Gates"][neighbourName];
+                    break;
+                }
+            }
+        }
+        else
+        { // Is location
+            var Cities = Object.keys(registry.Cities);
+            for(var i=0; i < Cities.length; i++)
+            {
+                if(registry.Cities[Cities[i]]["Locations"].hasOwnProperty(neighbourName))
+                {
+                    var neighbourData = registry.Cities[Cities[i]]["Locations"][neighbourName];
+                    break;
+                }
+            }
+        }
+
+        var walkerNPC = NpcAPI.createNPC(event.player.world.getMCWorld());
+        walkerNPC.setHome(Pos.getX(), Pos.getY(), Pos.getZ());
+        var NPCSctipt = "var start = ["+Pos.getX()+","+Pos.getY()+","+Pos.getZ()+"];var end = ["+neighbourData.Pos[0]+","+neighbourData.Pos[1]+","+neighbourData.Pos[2]+'];function tick(event){if(!event.npc.isNavigating()){event.npc.executeCommand(\\"tp @e[r=1,type=!player,tag='+walkerNPC.getUUID()+'] \\" + (start[0]+0.5) + \\" \\" + start[1] + \\" \\" + (start[2]+0.5));event.npc.navigateTo(end[0],end[1],end[2],1);}}';
+        var script = 'ScriptLanguage:"ECMAScript",ScriptEnabled:1b,Scripts:[{Script:"' + NPCSctipt + '",Console:[],ScriptList:[]}]';
+        
+        walkerNPC.display.setName("§6"+ neighbourName);
+        walkerNPC.display.setSize(2);
+        walkerNPC.display.setTint(12465151);
+        
+        walkerNPC.ai.setDoorInteract(1);
+        walkerNPC.ai.setReturnsHome(false);
+        walkerNPC.ai.setRetaliateType(3);
+        walkerNPC.ai.setStopOnInteract(false);
+        
+        walkerNPC.inventory.setArmor(0, walkerNPC.world.createItem("minecraft:magenta_glazed_terracotta", 0, 1));
+        walkerNPC.setPos(Pos);
+        walkerNPC.addTag("RoadsAnalysisWalker");
+        walkerNPC.addTag(walkerNPC.getUUID());
+        walkerNPC.spawn();
+        walkerNPC.executeCommand("entitydata @e[tag="+walkerNPC.getUUID()+"] {"+script+",Silent:1b}");
+    }
+    for(var i = 0; i < nodeData.Refs.length; i++)
+    {
+        var neighbourName = nodeData.Refs[i][0];
+        if(/^n\d*$/.test(neighbourName))
+        { // It's a node
+            var neighbourData = registry.Nodes[neighbourName];
+        }
+        else if(/^G\d*$/.test(neighbourName))
+        { // Is gate
+            var Cities = Object.keys(registry.Cities);
+            for(var i=0; i < Cities.length; i++)
+            {
+                if(registry.Cities[Cities[i]]["Gates"].hasOwnProperty(neighbourName))
+                {
+                    var neighbourData = registry.Cities[Cities[i]]["Gates"][neighbourName];
+                    break;
+                }
+            }
+        }
+        else
+        { // Is location
+            var Cities = Object.keys(registry.Cities);
+            for(var i=0; i < Cities.length; i++)
+            {
+                if(registry.Cities[Cities[i]]["Locations"].hasOwnProperty(neighbourName))
+                {
+                    var neighbourData = registry.Cities[Cities[i]]["Locations"][neighbourName];
+                    break;
+                }
+            }
+        }
+        //+Pos.getX()+","+Pos.getY()+","+Pos.getZ()+
+        var walkerNPC = NpcAPI.createNPC(event.player.world.getMCWorld());
+        walkerNPC.setHome(neighbourData.Pos[0],neighbourData.Pos[1],neighbourData.Pos[2]);
+        var NPCSctipt = "var start = ["+neighbourData.Pos[0]+","+neighbourData.Pos[1]+","+neighbourData.Pos[2]+"];var end = ["+Pos.getX()+","+Pos.getY()+","+Pos.getZ()+'];function tick(event){if(!event.npc.isNavigating()){event.npc.executeCommand(\\"tp @e[r=1,type=!player,tag='+walkerNPC.getUUID()+'] \\" + (start[0]+0.5) + \\" \\" + start[1] + \\" \\" + (start[2]+0.5));event.npc.navigateTo(end[0],end[1],end[2],1);}}';
+        var script = 'ScriptLanguage:"ECMAScript",ScriptEnabled:1b,Scripts:[{Script:"' + NPCSctipt + '",Console:[],ScriptList:[]}]';
+        
+        walkerNPC.display.setName("§6"+ neighbourName);
+        walkerNPC.display.setSize(2);
+        walkerNPC.display.setTint(12465151);
+        
+        walkerNPC.ai.setDoorInteract(1);
+        walkerNPC.ai.setReturnsHome(false);
+        walkerNPC.ai.setRetaliateType(3);
+        walkerNPC.ai.setStopOnInteract(false);
+        
+        walkerNPC.inventory.setArmor(0, walkerNPC.world.createItem("minecraft:magenta_glazed_terracotta", 0, 1));
+        walkerNPC.setPosition(neighbourData.Pos[0],neighbourData.Pos[1],neighbourData.Pos[2]);
+        walkerNPC.addTag("RoadsAnalysisWalker");
+        walkerNPC.addTag(walkerNPC.getUUID());
+        walkerNPC.spawn();
+        walkerNPC.executeCommand("entitydata @e[tag="+walkerNPC.getUUID()+"] {"+script+",Silent:1b}");
+    }
 }
 
 function customGuiButton(event)
@@ -612,7 +899,7 @@ function customGuiButton(event)
             event.player.closeGui();
             break;
         case GUI.G_BSave:
-            event.player.message("test")
+            //event.player.message("test")
             // Need to get the pos
             var posLabelText = event.gui.getComponent(GUI.G_LCords).getText();
             // X = index of X+2:index of Y-1
@@ -663,7 +950,7 @@ function customGuiButton(event)
             break;
         case GUI.S_BOverwriteRegistry:
             // Should ask for confirmation
-            var confirmGui = event.API.createCustomGui(1, 256, 80, true);
+            var confirmGui = event.API.createCustomGui(GUI.S_OverwriteRegistryConfirmation, 256, 80, true);
             confirmGui.setBackgroundTexture("customnpcs:textures/gui/bgfilled.png");
             confirmGui.addLabel(GUI.S_LTitle, "ARE YOU SURE?", 90, 15, 150, 10, 16711680);
             confirmGui.addLabel(GUI.S_LRegistryLock, "This action will overwrite all in-game data with data from the external file. The external file will not be erased.", 10, 20, 236, 40);
@@ -681,7 +968,7 @@ function customGuiButton(event)
             break;
         case GUI.S_BClearRegistry:
             // Should ask for confirmation
-            var confirmGui = event.API.createCustomGui(2, 256, 80, true);
+            var confirmGui = event.API.createCustomGui(GUI.S_ClearRegistryConfirmation, 256, 80, true);
             confirmGui.setBackgroundTexture("customnpcs:textures/gui/bgfilled.png");
             confirmGui.addLabel(GUI.S_LTitle, "ARE YOU SURE?", 90, 10, 150, 10, 16711680);
             confirmGui.addLabel(GUI.S_LRegistryLock, "This action will erase all registry data stored in-game. This will not erase any data in the external file or the physical nodes themselves.", 10, 20, 236, 40);
@@ -691,7 +978,7 @@ function customGuiButton(event)
             break;
         case GUI.S_BClearPrevNode:
             var tool = event.player.getMainhandItem();
-            tool.getTempdata().put("prevNode", "");
+            tool.getTempdata().put("prevNode", null);
             updateItemDesc(tool, tool.getTempdata().get("settings").mode);
             event.player.message("prevNode cleared!");
             break;
@@ -713,7 +1000,7 @@ function customGuiButton(event)
             openSettingsGUI(event, event.player.getMainhandItem());
             break;
         case GUI.S_BConfirm:
-            if(event.gui.getID() === 1) // Overwrite from file
+            if(event.gui.getID() === GUI.S_OverwriteRegistryConfirmation) // Overwrite from file
             {
                 var registryFile = new File("saves/" + event.player.world.getName() + "/Roads/Node Registry.json");
                 var fileContents = Files.readAllLines(registryFile.toPath(), CHARSET_UTF_8)[0];
@@ -722,13 +1009,421 @@ function customGuiButton(event)
                 event.player.world.getTempdata().put("NodeRegistry", registry);
                 event.player.message("Done! Local data overwritten with external data.");
             }
-            else if(event.gui.getID() === 2) // Purge local registry
+            else if(event.gui.getID() === GUI.S_ClearRegistryConfirmation) // Purge local registry
             {
                 event.player.world.getStoreddata().put("NodeRegistry", JSON.stringify(defaultRegistry));
                 event.player.world.getTempdata().put("NodeRegistry", JSON.parse(JSON.stringify(defaultRegistry)));
                 event.player.message("Done! Local data erased, blocks have not been removed. You should probably manually remove them.");
             }
             else{event.player.message("Somehow you've accidentally used GUI.S_BConfirm for something other than confirming a data overwrite or purge...")}
+            openSettingsGUI(event, event.player.getMainhandItem());
+            break;
+        case GUI.E_BClose:
+            event.player.closeGui();
+            break;
+        case GUI.EN_BClose:
+            event.player.closeGui();
+            break;
+        case GUI.E_BSave:
+            var tool = event.player.getMainhandItem();
+            var posLabelText = event.gui.getComponent(GUI.E_LCords).getText();
+            var aboutNode = tool.getTempdata().get("Focussed Node");
+            // X = index of X+2:index of Y-1
+            // Y = index of Y+2:index of Z-1
+            // Z = index of Z+2
+            var posX = posLabelText.slice(posLabelText.indexOf("X")+2,posLabelText.indexOf("Y")-1);
+            var posY = posLabelText.slice(posLabelText.indexOf("Y")+2,posLabelText.indexOf("Z")-1);
+            var posZ = posLabelText.slice(posLabelText.indexOf("Z")+2);
+
+            var block = event.player.world.getBlock(posX, posY, posZ);
+            var pos = block.getPos();
+            var madeChanges = false;
+
+            // If Name change
+            if(event.gui.getComponent(GUI.E_FName).getText() != aboutNode.Name)
+            {
+                /* #1 edit neighbour entries first
+                    Edit neighbour entries first
+                    - For every node that references this one, update the name in it's neighbour entry
+                    #2 Edit neighbour refs second
+                    - For every neighbour of this node, edit the refs in those nodes
+
+                #3 Change name in registry and about
+                    - Create new entry with copied data
+                    - Pop old entry
+                    - save about into block
+                */
+               // #1
+               var registry = event.player.world.getTempdata().get("NodeRegistry");
+               if(aboutNode.Type == "Node")
+               {
+                    var referencedBy = registry.Nodes[aboutNode.Name].Refs;
+               }
+               else if(aboutNode.Type == "Location")
+               {
+                    var referencedBy = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Refs;
+               }
+               else if(aboutNode.Type == "Gate")
+               {
+                    var referencedBy = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Refs;
+               }
+               else
+               {
+                   event.player.message("Something has gone very wrong, aborting action!");
+                   log("[ERR!] Tried to save name for node '" + aboutNode.Name + "' but it had no valid type!");
+                   break;
+               }
+               for(var i = 0; i < referencedBy.length; i++)
+               {
+                    var currentNode = referencedBy[i];
+                    // [Name, City]
+                    if(currentNode[1])
+                    {
+                        // Is a Location OR a Gate
+                        if(registry.Cities[currentNode[1]].Locations.hasOwnProperty(currentNode[0]))
+                        {
+                            // Is a Location
+                            var refNeighbours = registry.Cities[currentNode[1]].Locations[currentNode[0]].Neighbours;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                // [Name, distance, City]
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
+                                {
+                                    refNeighbours[j][0] = event.gui.getComponent(GUI.E_FName).getText();
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Is a Gate
+                            var refNeighbours = registry.Cities[currentNode[1]].Gates[currentNode[0]].Neighbours;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
+                                {
+                                    refNeighbours[j][0] = event.gui.getComponent(GUI.E_FName).getText();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Is a node
+                        var refNeighbours = registry.Nodes[currentNode[0]].Neighbours;
+                        for(var j = 0; j < refNeighbours.length; j++)
+                        {
+                            if(refNeighbours[j][0] == aboutNode.Name)
+                            {
+                                refNeighbours[j][0] = event.gui.getComponent(GUI.E_FName).getText();
+                                break;
+                            }
+                        }
+                    }
+               }
+
+               // #2
+               if(aboutNode.Type == "Node")
+               {
+                    var neighbourList = registry.Nodes[aboutNode.Name].Neighbours;
+               }
+               else if(aboutNode.Type == "Location")
+               {
+                    var neighbourList = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Neighbours;
+               }
+               else if(aboutNode.Type == "Gate")
+               {
+                    var neighbourList = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Neighbours;
+               }
+               else
+               {
+                   event.player.message("Something has gone very wrong, aborting action!");
+                   log("[ERR!] Tried to save name for node '" + aboutNode.Name + "' but it failed a check it previously passed! This is probably because I forgot to add a new node type to the list of checks in #2.");
+                   break;
+               }
+
+               for(var i = 0; i < neighbourList.length; i++)
+               {
+                    var currentNode = neighbourList[i];
+                    // [Name, Distance, City]
+                    if(currentNode[2])
+                    {
+                        // Is a Location OR a Gate
+                        if(registry.Cities[currentNode[2]].Locations.hasOwnProperty(currentNode[0]))
+                        {
+                            // Is a Location
+                            var refNeighbours = registry.Cities[currentNode[2]].Locations[currentNode[0]].Refs;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                // [Name, City]
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                                {
+                                    refNeighbours[j][0] = event.gui.getComponent(GUI.E_FName).getText();
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Is a Gate
+                            var refNeighbours = registry.Cities[currentNode[2]].Gates[currentNode[0]].Refs;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                                {
+                                    refNeighbours[j][0] = event.gui.getComponent(GUI.E_FName).getText();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Is a node
+                        var refNeighbours = registry.Nodes[currentNode[0]].Refs;
+                        for(var j = 0; j < refNeighbours.length; j++)
+                        {
+                            if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                            {
+                                refNeighbours[j][0] = event.gui.getComponent(GUI.E_FName).getText();
+                                break;
+                            }
+                        }
+                    }
+               }
+
+               // #3
+               if(aboutNode.Type == "Node")
+               {
+                    registry.Nodes[event.gui.getComponent(GUI.E_FName).getText()] = JSON.parse(JSON.stringify(registry.Nodes[aboutNode.Name])); // Duplicate data into new key
+                    delete registry.Nodes[aboutNode.Name]; // Remove old data and old key
+               }
+               else if(aboutNode.Type == "Location")
+               {
+                    registry.Cities[aboutNode.City].Locations[event.gui.getComponent(GUI.E_FName).getText()] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Locations[aboutNode.Name]));
+                    registry.Cities[aboutNode.City].Locations[event.gui.getComponent(GUI.E_FName).getText()].Name = event.gui.getComponent(GUI.E_FName).getText();
+                    delete registry.Cities[aboutNode.City].Locations[aboutNode.Name];
+               }
+               else if(aboutNode.Type == "Gate")
+               {
+                registry.Cities[aboutNode.City].Gates[event.gui.getComponent(GUI.E_FName).getText()] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Gates[aboutNode.Name]));
+                registry.Cities[aboutNode.City].Gates[event.gui.getComponent(GUI.E_FName).getText()].Name = event.gui.getComponent(GUI.E_FName).getText();
+                delete registry.Cities[aboutNode.City].Gates[aboutNode.Name];
+               }
+
+               // Save registry
+               event.player.world.getStoreddata().put("NodeRegistry", JSON.stringify(registry));
+               // Save data to block
+               aboutNode.Name = event.gui.getComponent(GUI.E_FName);
+               block.getStoreddata().put("about", JSON.stringify(aboutNode));
+
+               madeChanges = true;
+            }
+            // TODO If City change (copypaste from above)
+            if(event.gui.getComponent(GUI.E_FCity).getText() != aboutNode.City)
+            {
+                /* edit neighbour entries first
+                    Neighbour Refs must be changed
+                Change name in registry and about
+                */
+               var registry = event.player.world.getTempdata().get("NodeRegistry");
+               if(aboutNode.Type == "Node")
+               {
+                    var referencedBy = registry.Nodes[aboutNode.Name].Refs;
+               }
+               else if(aboutNode.Type == "Location")
+               {
+                    var referencedBy = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Refs;
+               }
+               else if(aboutNode.Type == "Gate")
+               {
+                    var referencedBy = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Refs;
+               }
+               else
+               {
+                   event.player.message("Something has gone very wrong, aborting action!");
+                   log("[ERR!] Tried to save City for node '" + aboutNode.Name + "' but it had no valid type!");
+                   break;
+               }
+               for(var i = 0; i < referencedBy.length; i++)
+               {
+                    var currentNode = referencedBy[i];
+                    // [Name, City]
+                    if(currentNode[1])
+                    {
+                        // Is a Location OR a Gate
+                        if(registry.Cities[currentNode[1]].Locations.hasOwnProperty(currentNode[0]))
+                        {
+                            // Is a Location
+                            var refNeighbours = registry.Cities[currentNode[1]].Locations[currentNode[0]].Neighbours;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                // [Name, distance, City]
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
+                                {
+                                    refNeighbours[j][2] = event.gui.getComponent(GUI.E_FCity).getText();
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Is a Gate
+                            var refNeighbours = registry.Cities[currentNode[1]].Gates[currentNode[0]].Neighbours;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
+                                {
+                                    refNeighbours[j][2] = event.gui.getComponent(GUI.E_FCity).getText();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Is a node
+                        event.player.message("Something has gone very wrong, aborting action!");
+                        log("[ERR!] Tried to save City for node '" + aboutNode.Name + "' but it appears to be a node! Nodes must be stateless! (do not belong to a City)");
+                        break;
+                    }
+               }
+
+               // #2
+               if(aboutNode.Type == "Node")
+               {
+                    event.player.message("Something has gone very wrong, aborting action!");
+                    log("[ERR!] Tried to save City for node '" + aboutNode.Name + "' but it appears to be a node! Nodes must be stateless! (do not belong to a City)");
+                    break;
+                }
+               else if(aboutNode.Type == "Location")
+               {
+                    var neighbourList = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Neighbours;
+               }
+               else if(aboutNode.Type == "Gate")
+               {
+                    var neighbourList = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Neighbours;
+               }
+               else
+               {
+                   event.player.message("Something has gone very wrong, aborting action!");
+                   log("[ERR!] Tried to save City for node '" + aboutNode.Name + "' but it failed a check it previously passed! This is probably because I forgot to add a new node type to the list of checks in #2.");
+                   break;
+               }
+
+               for(var i = 0; i < neighbourList.length; i++)
+               {
+                    var currentNode = neighbourList[i];
+                    // [Name, Distance, City]
+                    if(currentNode[2])
+                    {
+                        // Is a Location OR a Gate
+                        if(registry.Cities[currentNode[2]].Locations.hasOwnProperty(currentNode[0]))
+                        {
+                            // Is a Location
+                            var refNeighbours = registry.Cities[currentNode[2]].Locations[currentNode[0]].Refs;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                // [Name, City]
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                                {
+                                    refNeighbours[j][1] = event.gui.getComponent(GUI.E_FCity).getText();
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Is a Gate
+                            var refNeighbours = registry.Cities[currentNode[2]].Gates[currentNode[0]].Refs;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                                {
+                                    refNeighbours[j][1] = event.gui.getComponent(GUI.E_FCity).getText();
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Is a node
+                        event.player.message("Something has gone very wrong, aborting action!");
+                        log("[ERR!] Tried to save City for node '" + aboutNode.Name + "' but it appears to be a node! Nodes must be stateless! (do not belong to a City)");
+                        break;
+                    }
+               }
+
+               // #3
+               if(aboutNode.Type == "Node")
+               {
+                    event.player.message("Something has gone very wrong, aborting action!");
+                    log("[ERR!] Tried to save City for node '" + aboutNode.Name + "' but it appears to be a node! Nodes must be stateless! (do not belong to a City)");
+                    break;
+               }
+               else if(aboutNode.Type == "Location")
+               {
+                    registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Locations[aboutNode.Name] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Locations[aboutNode.Name]));
+                    registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Locations[aboutNode.Name].City = event.gui.getComponent(GUI.E_FCity).getText();
+                    delete registry.Cities[aboutNode.City].Locations[aboutNode.Name];
+               }
+               else if(aboutNode.Type == "Gate")
+               {
+                    registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Gates[aboutNode.Name] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Gates[aboutNode.Name]));
+                    registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Gates[aboutNode.Name].City = event.gui.getComponent(GUI.E_FCity).getText();
+                    delete registry.Cities[aboutNode.City].Gates[aboutNode.Name];
+               }
+
+               // Save registry
+               event.player.world.getStoreddata().put("NodeRegistry", JSON.stringify(registry));
+               // Save data to block
+               aboutNode.City = event.gui.getComponent(GUI.E_FCity);
+               block.getStoreddata().put("about", JSON.stringify(aboutNode));
+
+               madeChanges = true;
+            }
+            // Confirm to player
+            break;
+        case GUI.E_BEditNeighbours: // Opens Edit Neighbour GUI
+            var posLabelText = event.gui.getComponent(GUI.E_LCords).getText();
+            // X = index of X+2:index of Y-1
+            // Y = index of Y+2:index of Z-1
+            // Z = index of Z+2
+            var posX = posLabelText.slice(posLabelText.indexOf("X")+2,posLabelText.indexOf("Y")-1);
+            var posY = posLabelText.slice(posLabelText.indexOf("Y")+2,posLabelText.indexOf("Z")-1);
+            var posZ = posLabelText.slice(posLabelText.indexOf("Z")+2);
+
+            var pos = event.player.world.getBlock(posX, posY, posZ).getPos();
+            openEditNeighbourGUI(event, pos);
+            break;
+        case GUI.E_BDeleteNode: // TODO Opens prompt to delete
+            // Should ask for confirmation
+            var confirmGui = event.API.createCustomGui(GUI.E_DeleteNodeConfirmation, 256, 80, true);
+            confirmGui.setBackgroundTexture("customnpcs:textures/gui/bgfilled.png");
+            confirmGui.addLabel(GUI.E_LTitle, "ARE YOU SURE?", 90, 15, 150, 10, 16711680);
+            confirmGui.addLabel(GUI.E_LSubtitle, "This action will delete this node from the registry and references to in from other nodes. Block will be removed also.", 10, 20, 236, 40);
+            confirmGui.addButton(GUI.E_BCancel, "Cancel", 10, 60, 50, 20);
+            confirmGui.addButton(GUI.E_BConfirm, "Confirm", 196, 60, 50, 20);
+
+            event.player.showCustomGui(confirmGui);
+            break;
+        case GUI.E_BConfirm: // TODO Deletes Node
+            if(event.gui.getID() === GUI.E_DeleteNodeConfirmation)
+            {
+
+            }
+            else if(event.gui.getID() === GUI.E_DeleteNeighbourConfirmation)
+            {
+
+            }
+            break;
+        case GUI.E_BCancel: // TODO Does not delete node, closes prompt and brings back the gui
+            break;
+        case GUI.EN_BRemoveNeighbour: // TODO Removes the neighbour, maybe a confirmation prompt?
+            break;
+        case GUI.EN_BBack: // TODO Returns to the Edit Gui
             break;
     }
     
@@ -753,6 +1448,29 @@ function customGuiScroll(event)
             tool.getStoreddata().put("savedSettings", JSON.stringify(settings));
 
             updateItemDesc(tool, settings.mode);
+            if(tool.getStoreddata().get("AnalysisSelectedNode"))
+                {
+                    var npcList = event.player.world.getNearbyEntities(event.player.getPos(), 42, 2);
+                    for(var i = 0; i<npcList.length; i++)
+                    {
+                        if(npcList[i].hasTag("RoadsAnalysisWalker")){npcList[i].despawn();}
+                    }
+                }
+                tool.getStoreddata().put("AnalysisSelectedNode", "");
+            break;
+        case GUI.E_SCityList:
+            event.gui.getComponent(GUI.E_FCity).setText(event.selection[0]);
+            event.gui.update(event.player);
             break;
     }
+}
+
+function enumerate(List, StartVal) // got tired of adding everything manually
+{
+    var enumeratedObject = {};
+    for(var i = 0; i < List.length; i++)
+    {
+        enumeratedObject[List[i]] = i + StartVal;
+    }
+    return enumeratedObject;
 }
