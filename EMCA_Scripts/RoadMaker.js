@@ -1,19 +1,15 @@
 /*
-What this needs to do:
-    - Place scripted blocks containing the right info on the floor where the player clicks
-    - Register points in-between entry/exits
-    - Edit nodes
-    - Have an NPC to walk newly created paths
-    - 
+Road maker tool v0.43 by edwardg
 
-Modes:
-    1. Creating Nodes
-        1. Pathfinding nodes ("Road Nodes")
-        2. Entry/exit nodes ("Locations")
-        3. City entry/exit nodes ("Locations" when shift right clicking)
-    2. Editing Nodes ("Editing")
-    3. Analysis
-        1. Have npc walk along created route
+Aids in the creation of a road network by letting you select points on the ground by left clicking them
+
+Stuff left to do:
+- Remove neighbour functionality [High priority]
+- Edit script adding to include scripts [Have to make those scripts first]
+- Error/Input checking [Low priority, I don't want to do it ;(]
+- Update description [Low]
+- Figure out why the tool keeps resetting [Low]
+- Remove unnecessary commented out code [Medium]
 */
 
 var NpcAPI = Java.type("noppes.npcs.api.NpcAPI").Instance();
@@ -55,7 +51,7 @@ var defaultRegistry = {
 var defaultSettings = {
     "allowBacktrack": false, // Allow travel in two directions
     "mode": "None",
-    "lockRegistry": true, // TODO Prevent race-condition by only allowing 1 editor at a time
+    "lockRegistry": true, // TODO Prevent race-condition by only allowing 1 editor at a time (Is this even possible?)
     "autoUpdateFile": true // Should the saved file be updated upon every node's creation?
 };
 
@@ -1614,7 +1610,7 @@ function customGuiButton(event)
                                 // [Name, distance, City]
                                 if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
                                 {
-                                    delete refNeighbours[j];
+                                    refNeighbours.splice(j,1);
                                     break;
                                 }
                             }
@@ -1627,7 +1623,7 @@ function customGuiButton(event)
                             {
                                 if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
                                 {
-                                    delete refNeighbours[j];
+                                    refNeighbours.splice(j,1);
                                     break;
                                 }
                             }
@@ -1641,7 +1637,7 @@ function customGuiButton(event)
                         {
                             if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
                             {
-                                delete refNeighbours[j];
+                                refNeighbours.splice(j,1);
                                 break;
                             }
                         }
@@ -1683,7 +1679,7 @@ function customGuiButton(event)
                                 // [Name, City]
                                 if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
                                 {
-                                    delete refNeighbours[j];
+                                    refNeighbours.splice(j,1);
                                     break;
                                 }
                             }
@@ -1696,7 +1692,7 @@ function customGuiButton(event)
                             {
                                 if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
                                 {
-                                    delete refNeighbours[j];
+                                    refNeighbours.splice(j,1);
                                     break;
                                 }
                             }
@@ -1710,7 +1706,7 @@ function customGuiButton(event)
                         {
                             if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
                             {
-                                delete refNeighbours[j];
+                                refNeighbours.splice(j,1);
                                 break;
                             }
                         }
@@ -1753,6 +1749,12 @@ function customGuiButton(event)
             else if(event.gui.getID() === GUI.E_DeleteNeighbourConfirmation) // TODO removes neighbour
             {
                 event.player.message("Delete Node neighbour confirmation recived!");
+                /*
+                    1. Remove the neighbour's Refs entry
+                    2. Remove Neighbour entry
+                    3. Save registry
+                    4. Write to file if enabled
+                    */
             }
             break;
         case GUI.E_BCancel:
@@ -1813,7 +1815,7 @@ function customGuiButton(event)
         case GUI.EN_BRemoveNeighbour: // Opens prompt to delete a neighbour
             var confirmGui = event.API.createCustomGui(GUI.E_DeleteNeighbourConfirmation, 256, 80, true);
             confirmGui.setBackgroundTexture("customnpcs:textures/gui/bgfilled.png");
-            confirmGui.addLabel(GUI.E_LTitle, "ARE YOU SURE?", 90, 15, 150, 10, 16711680);
+            confirmGui.addLabel(GUI.E_LTitle, "ARE YOU SURE?", 90, 10, 150, 10, 16711680);
             confirmGui.addLabel(GUI.E_LSubtitle, "This action will remove this neighbour of the selected node, it will not remove this node as a neighbour if it is one. You can re-add this as a neighbour at any point.", 10, 20, 236, 40);
             confirmGui.addButton(GUI.E_BCancel, "Cancel", 10, 60, 50, 20);
             confirmGui.addButton(GUI.E_BConfirm, "Confirm", 196, 60, 50, 20);
@@ -1882,7 +1884,73 @@ function customGuiScroll(event)
             event.gui.getComponent(GUI.E_FCity).setText(event.selection[0]);
             event.gui.update(event.player);
             break;
-        case GUI.EN_SNeighbourList: // TODO selects neighbour
+        case GUI.EN_SNeighbourList: // selects neighbour
+                var tool = event.player.getMainhandItem();
+                var aboutNode = tool.getTempdata().get("Focussed Node");
+                var registry = event.player.world.getTempdata().get("NodeRegistry");
+                var gui = event.gui;
+                if(aboutNode.Type == "Node")
+                {
+                    var thisNode = registry.Nodes[aboutNode.Name];
+                }
+                else if(aboutNode.Type == "Location")
+                {
+                    var thisNode = registry.Cities[aboutNode.City].Locations[aboutNode.Name];
+                }
+                else if(aboutNode.Type == "Gate")
+                {
+                    var thisNode = registry.Cities[aboutNode.City].Gates[aboutNode.Name];
+                }
+                else
+                {
+                    event.player.message("Something has gone very wrong, aborting action!");
+                    log("[ERR!] Tried to select an neighbour node for '" + aboutNode.Name + "' but it had no valid type! This may be because I added a new node type and forgot to add it here.");
+                    break;
+                }
+                var neighbourList = thisNode.Neighbours;
+                // Find neighbour's City, luckily it's ordered
+                var neighbourName = event.selection[0];
+                var neighbourCity = neighbourList[event.scrollIndex][2]; //["Name", Dist, "City"]
+                if(neighbourCity)
+                {
+                    // Is a Location OR a Gate
+                    if(registry.Cities[neighbourCity].Locations.hasOwnProperty(neighbourName))
+                    {
+                        // Is a Location
+                        var neighbour = registry.Cities[neighbourCity].Locations[neighbourName];
+                        
+                    }
+                    else
+                    {
+                        // Is a Gate
+                        var neighbour = registry.Cities[neighbourCity].Gates[neighbourName];
+                        
+                    }
+                }
+                else
+                {
+                    // Is a node
+                    var neighbour = registry.Nodes[neighbourName];
+                }
+                //gui.addLabel(GUI.EN_LInfo, "Info", 160, 40, 30, 10);
+                //gui.addLabel(GUI.E_LLocation, "Location", 5, 120, 45, 10);
+                //gui.addLabel(GUI.E_LCords, "X:"+Pos.getX()+" Y:"+Pos.getY()+" Z:"+Pos.getZ(), 50, 120, 250, 10);
+                gui.addLabel(GUI.EN_LNeighbourLocation, "Location X:"+ neighbour.Pos[0] +" Y:" + neighbour.Pos[1] + " Z:" + neighbour.Pos[2], 120, 60, 500, 10);
+                gui.addLabel(GUI.EN_LNeighbourCity, "City: " + neighbourCity, 120, 80, 500, 10);
+                // Is backtracking possible?
+                var refList = thisNode.Refs;
+                var isBacktracked = false;
+                for(var i = 0; i < refList.length; i++)
+                {
+                    if(refList[i][0] == neighbourName && refList[i][1] == neighbourCity){isBacktracked = true;break;}
+                }
+                gui.addLabel(GUI.EN_LisNeighbour, "Backtrack: " + isBacktracked, 120, 100, 500, 10);
+                gui.getComponent(GUI.EN_SNeighbourList).setDefaultSelection(event.scrollIndex);
+
+                gui.addButton(GUI.EN_BRemoveNeighbour, "Remove Neighbour", 120, 120, 120, 20);
+
+                tool.getTempdata().put("Focussed Neighbour", neighbour);
+                gui.update(event.player);
             break;
     }
 }
