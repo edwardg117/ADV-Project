@@ -275,8 +275,7 @@ function attack(event)
             break;
         case 1:
             // Player clicked on an entity
-            // TODO make this interact with the npc somehow
-            event.player.message("That is an entity");
+            event.player.message("That is an entity, try clicking on a node instead");
             break;
         case 2:
             // Player clicked on a block
@@ -357,6 +356,7 @@ function attack(event)
             else
             {
                 event.player.message("You are in the darkest timeline and evil Abed has stolen this mode!");
+                log("[WARN] Settings appear to be corrupt, try resetting them");
             }
 
             
@@ -448,7 +448,7 @@ function placeBlock(Player, Pos, Type, Gui)
     newBlock.getTextPlane4().setScale(2);
     newBlock.getTextPlane4().setRotationY(270);
     // Apply Script
-    newBlock.executeCommand​('blockdata ~ ~ ~ {' + script + '}');
+    newBlock.executeCommand('blockdata ~ ~ ~ {' + script + '}');
     newBlock.getStoreddata().put("about",JSON.stringify({"Type":nodeType, "Name":nodeName, "City":City})); // Make it easier to identify itself later
     Player.message("Placed node: " + newBlock.getStoreddata().get("about"));// nodeName
 
@@ -629,7 +629,7 @@ function openSettingsGUI(event, tool)
     event.player.showCustomGui(gui);
 }
 
-function openEditGUI(event, Pos) // Manipulation of existing nodes // TODO Editing mode
+function openEditGUI(event, Pos) // Manipulation of existing nodes
 {
     var tool = event.player.getMainhandItem();
     var selectedNode = event.player.world.getBlock(Pos.getX(), Pos.getY(), Pos.getZ());
@@ -677,7 +677,7 @@ function openEditGUI(event, Pos) // Manipulation of existing nodes // TODO Editi
     gui.addButton(GUI.E_BEditNeighbours, "Edit Neighbours", 20, 140, 100, 20);
     gui.addButton(GUI.E_BDeleteNode, "Delete Node", 136, 140, 100, 20);
 
-    gui.addButton(GUI.E_BCancel,"Cancel", 30, 200, 50, 20);
+    gui.addButton(GUI.E_BClose,"Close", 30, 200, 50, 20);
     gui.addButton(GUI.E_BSave,"Save", 150, 200, 50, 20);
 
     tool.getTempdata().put("Focussed Node", aboutNode);
@@ -686,7 +686,7 @@ function openEditGUI(event, Pos) // Manipulation of existing nodes // TODO Editi
 
 }
 
-function openEditNeighbourGUI(event, Pos) // TODO Edit Neighbours
+function openEditNeighbourGUI(event, Pos) // Edit Neighbour GUI
 {
     var selectedNode = event.player.world.getBlock(Pos.getX(), Pos.getY(), Pos.getZ());
     var aboutNode = JSON.parse(selectedNode.getStoreddata().get("about"));
@@ -727,7 +727,7 @@ function openEditNeighbourGUI(event, Pos) // TODO Edit Neighbours
     event.player.showCustomGui(gui);
 }
 
-function analysisMode(event, Pos) // Help debug issues
+/*function analysisMode(event, Pos) // Help debug issues
 {
     if(event.item.getStoreddata().get("AnalysisSelectedNode"))
     {
@@ -861,6 +861,100 @@ function analysisMode(event, Pos) // Help debug issues
         walkerNPC.addTag(walkerNPC.getUUID());
         walkerNPC.spawn();
         walkerNPC.executeCommand("entitydata @e[tag="+walkerNPC.getUUID()+"] {"+script+",Silent:1b}");
+    }
+}*/
+
+function analysisMode(event, Pos)
+{
+    var selectedNode = event.player.world.getBlock(Pos.getX(), Pos.getY(), Pos.getZ());
+    var aboutNode = JSON.parse(selectedNode.getStoreddata().get("about"));
+    if(!aboutNode){return null;}
+    event.item.getStoreddata().put("AnalysisSelectedNode", aboutNode.Name);
+    event.player.message("Selected: §6" + aboutNode.Name);
+    // Find node in registry
+    var registry = event.player.world.getTempdata().get("NodeRegistry");
+    if(aboutNode.City)
+    {
+        if(aboutNode.Type === "Location"){var nodeData = registry["Cities"][aboutNode.City]["Locations"][aboutNode.Name];}
+        else if(about.Type === "Gate"){var nodeData = registry["Cities"][aboutNode.City]["Gates"][aboutNode.Name];}
+        else{event.player.message("Node has City but isn't a Location or Gate!!");}
+    }
+    else{var nodeData = registry["Nodes"][aboutNode.Name];}
+
+    event.player.message("§aNeighbours: " + JSON.stringify(nodeData.Neighbours));
+    event.player.message("§4Refrenced By: " + JSON.stringify(nodeData.Refs));
+
+    // Draw line to Neighbours
+    for(var i = 0; i < nodeData.Neighbours.length; i++)
+    {
+        var neighbourName = nodeData.Neighbours[i][0];
+        if(/^n\d*$/.test(neighbourName))
+        { // It's a node
+            var neighbourData = registry.Nodes[neighbourName];
+        }
+        else if(/^G\d*$/.test(neighbourName))
+        { // Is gate
+            var Cities = Object.keys(registry.Cities);
+            for(var i=0; i < Cities.length; i++)
+            {
+                if(registry.Cities[Cities[i]]["Gates"].hasOwnProperty(neighbourName))
+                {
+                    var neighbourData = registry.Cities[Cities[i]]["Gates"][neighbourName];
+                    break;
+                }
+            }
+        }
+        else
+        { // Is location
+            var Cities = Object.keys(registry.Cities);
+            for(var i=0; i < Cities.length; i++)
+            {
+                if(registry.Cities[Cities[i]]["Locations"].hasOwnProperty(neighbourName))
+                {
+                    var neighbourData = registry.Cities[Cities[i]]["Locations"][neighbourName];
+                    break;
+                }
+            }
+        }
+        var neighbourPos = event.player.world.getBlock(neighbourData.Pos[0], neighbourData.Pos[1], neighbourData.Pos[2]).getPos();
+
+        drawLine(event.player.world, Pos.add(0,1,0), neighbourPos, 10); // y+1 because particles don't render through scripted blocks
+    }
+    // Draw line from refs
+    for(var i = 0; i < nodeData.Refs.length; i++)
+    {
+        var neighbourName = nodeData.Refs[i][0];
+        if(/^n\d*$/.test(neighbourName))
+        { // It's a node
+            var neighbourData = registry.Nodes[neighbourName];
+        }
+        else if(/^G\d*$/.test(neighbourName))
+        { // Is gate
+            var Cities = Object.keys(registry.Cities);
+            for(var i=0; i < Cities.length; i++)
+            {
+                if(registry.Cities[Cities[i]]["Gates"].hasOwnProperty(neighbourName))
+                {
+                    var neighbourData = registry.Cities[Cities[i]]["Gates"][neighbourName];
+                    break;
+                }
+            }
+        }
+        else
+        { // Is location
+            var Cities = Object.keys(registry.Cities);
+            for(var i=0; i < Cities.length; i++)
+            {
+                if(registry.Cities[Cities[i]]["Locations"].hasOwnProperty(neighbourName))
+                {
+                    var neighbourData = registry.Cities[Cities[i]]["Locations"][neighbourName];
+                    break;
+                }
+            }
+        }
+        var neighbourPos = event.player.world.getBlock(neighbourData.Pos[0], neighbourData.Pos[1], neighbourData.Pos[2]).getPos();
+
+        drawLine(event.player.world, neighbourPos.add(0,1,0), Pos, 10, "reddust");
     }
 }
 
@@ -1211,16 +1305,34 @@ function customGuiButton(event)
                 registry.Cities[aboutNode.City].Gates[event.gui.getComponent(GUI.E_FName).getText()].Name = event.gui.getComponent(GUI.E_FName).getText();
                 delete registry.Cities[aboutNode.City].Gates[aboutNode.Name];
                }
+               else
+               {
+                   event.player.message("Something has gone very wrong, aborting action!");
+                   log("[ERR!] Tried to save name for node '" + aboutNode.Name + "' but it failed a check it previously passed! This is probably because I forgot to add a new node type to the list of checks in #3.");
+                   break;
+                }
 
-               // Save registry
-               event.player.world.getStoreddata().put("NodeRegistry", JSON.stringify(registry));
-               // Save data to block
-               aboutNode.Name = event.gui.getComponent(GUI.E_FName);
-               block.getStoreddata().put("about", JSON.stringify(aboutNode));
-
-               madeChanges = true;
+                // Save registry
+                event.player.world.getStoreddata().put("NodeRegistry", JSON.stringify(registry));
+                // Save data to block
+                aboutNode.Name = event.gui.getComponent(GUI.E_FName).getText();
+                block.getStoreddata().put("about", JSON.stringify(aboutNode));
+                // Update visible name
+                block.getTextPlane().setText(aboutNode.Name);
+                block.getTextPlane().setScale(2);
+                block.getTextPlane2().setRotationY(0);
+                block.getTextPlane2().setText(aboutNode.Name);
+                block.getTextPlane2().setScale(2);
+                block.getTextPlane2().setRotationY(90);
+                block.getTextPlane3().setText(aboutNode.Name);
+                block.getTextPlane3().setScale(2);
+                block.getTextPlane3().setRotationY(180);
+                block.getTextPlane4().setText(aboutNode.Name);
+                block.getTextPlane4().setScale(2);
+                block.getTextPlane4().setRotationY(270);
+                madeChanges = true;
             }
-            // TODO If City change (copypaste from above)
+            // If City change
             if(event.gui.getComponent(GUI.E_FCity).getText() != aboutNode.City)
             {
                 /* edit neighbour entries first
@@ -1284,9 +1396,15 @@ function customGuiButton(event)
                     else
                     {
                         // Is a node
-                        event.player.message("Something has gone very wrong, aborting action!");
-                        log("[ERR!] Tried to save City for node '" + aboutNode.Name + "' but it appears to be a node! Nodes must be stateless! (do not belong to a City)");
-                        break;
+                        var refNeighbours = registry.Nodes[currentNode[0]].Neighbours;
+                        for(var j = 0; j < refNeighbours.length; j++)
+                        {
+                            if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
+                            {
+                                refNeighbours[j][2] = event.gui.getComponent(GUI.E_FCity).getText();
+                                break;
+                            }
+                        }
                     }
                }
 
@@ -1350,9 +1468,15 @@ function customGuiButton(event)
                     else
                     {
                         // Is a node
-                        event.player.message("Something has gone very wrong, aborting action!");
-                        log("[ERR!] Tried to save City for node '" + aboutNode.Name + "' but it appears to be a node! Nodes must be stateless! (do not belong to a City)");
-                        break;
+                        var refNeighbours = registry.Nodes[currentNode[0]].Refs;
+                        for(var j = 0; j < refNeighbours.length; j++)
+                        {
+                            if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                            {
+                                refNeighbours[j][1] = event.gui.getComponent(GUI.E_FCity).getText();
+                                break;
+                            }
+                        }
                     }
                }
 
@@ -1365,26 +1489,58 @@ function customGuiButton(event)
                }
                else if(aboutNode.Type == "Location")
                {
-                    registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Locations[aboutNode.Name] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Locations[aboutNode.Name]));
+                    if(registry.Cities.hasOwnProperty(event.gui.getComponent(GUI.E_FCity).getText()))
+                    {registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Locations[aboutNode.Name] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Locations[aboutNode.Name]));}
+                    else
+                    {
+                        registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()] = {"Locations":{},"Gates":{}};
+                        registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Locations[aboutNode.Name] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Locations[aboutNode.Name]));
+                    }
                     registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Locations[aboutNode.Name].City = event.gui.getComponent(GUI.E_FCity).getText();
                     delete registry.Cities[aboutNode.City].Locations[aboutNode.Name];
                }
                else if(aboutNode.Type == "Gate")
                {
-                    registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Gates[aboutNode.Name] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Gates[aboutNode.Name]));
+                    if(registry.Cities.hasOwnProperty(event.gui.getComponent(GUI.E_FCity).getText()))
+                    {registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Gates[aboutNode.Name] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Gates[aboutNode.Name]));}
+                    else
+                    {
+                        registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()] = {"Locations":{},"Gates":{}};
+                        registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Gates[aboutNode.Name] = JSON.parse(JSON.stringify(registry.Cities[aboutNode.City].Gates[aboutNode.Name]));
+                    }
                     registry.Cities[event.gui.getComponent(GUI.E_FCity).getText()].Gates[aboutNode.Name].City = event.gui.getComponent(GUI.E_FCity).getText();
                     delete registry.Cities[aboutNode.City].Gates[aboutNode.Name];
+               }
+               else
+               {
+                   event.player.message("Something has gone very wrong, aborting action!");
+                   log("[ERR!] Tried to save city for node '" + aboutNode.Name + "' but it failed a check it previously passed! This is probably because I forgot to add a new node type to the list of checks in #3.");
+                   break;
                }
 
                // Save registry
                event.player.world.getStoreddata().put("NodeRegistry", JSON.stringify(registry));
                // Save data to block
-               aboutNode.City = event.gui.getComponent(GUI.E_FCity);
+               aboutNode.City = event.gui.getComponent(GUI.E_FCity).getText();
                block.getStoreddata().put("about", JSON.stringify(aboutNode));
 
                madeChanges = true;
             }
             // Confirm to player
+            if(madeChanges)
+            {
+                // Save registry
+                newBlock.world.getStoreddata().put("NodeRegistry", JSON.stringify(registry)); // Save the registry to storeddata
+
+                // Save to file?
+                if(settings.autoUpdateFile)
+                {
+                    var registryFile = new File("saves/" + event.player.world.getName() + "/Roads/Node Registry.json");
+                    Files.write(registryFile.toPath(), JSON.stringify(registry).getBytes());
+                }
+                event.player.message("Saved changes to Node!");
+            }
+            else{event.player.message("No Node information has changed!");}
             break;
         case GUI.E_BEditNeighbours: // Opens Edit Neighbour GUI
             var posLabelText = event.gui.getComponent(GUI.E_LCords).getText();
@@ -1398,7 +1554,7 @@ function customGuiButton(event)
             var pos = event.player.world.getBlock(posX, posY, posZ).getPos();
             openEditNeighbourGUI(event, pos);
             break;
-        case GUI.E_BDeleteNode: // TODO Opens prompt to delete
+        case GUI.E_BDeleteNode: // Opens prompt to delete
             // Should ask for confirmation
             var confirmGui = event.API.createCustomGui(GUI.E_DeleteNodeConfirmation, 256, 80, true);
             confirmGui.setBackgroundTexture("customnpcs:textures/gui/bgfilled.png");
@@ -1409,21 +1565,285 @@ function customGuiButton(event)
 
             event.player.showCustomGui(confirmGui);
             break;
-        case GUI.E_BConfirm: // TODO Deletes Node
-            if(event.gui.getID() === GUI.E_DeleteNodeConfirmation)
+        case GUI.E_BConfirm:
+            if(event.gui.getID() === GUI.E_DeleteNodeConfirmation) // Deletes Node
             {
+                event.player.message("Delete Node confirmation recived!");
+                var tool = event.player.getMainhandItem();
+                var aboutNode = tool.getTempdata().get("Focussed Node");
+                // #1 Remove this node as a neighbour from all nodes that have it
+                var registry = event.player.world.getTempdata().get("NodeRegistry");
 
+               if(aboutNode.Type == "Node")
+               {
+                    var referencedBy = registry.Nodes[aboutNode.Name].Refs;
+                    var pos = registry.Nodes[aboutNode.Name].Pos;
+                    var block = event.player.world.getBlock(pos[0], pos[1], pos[2]);
+               }
+               else if(aboutNode.Type == "Location")
+               {
+                    var referencedBy = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Refs;
+                    var pos = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Pos;
+                    var block = event.player.world.getBlock(pos[0], pos[1], pos[2]);
+               }
+               else if(aboutNode.Type == "Gate")
+               {
+                    var referencedBy = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Refs;
+                    var pos = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Pos;
+                    var block = event.player.world.getBlock(pos[0], pos[1], pos[2]);
+               }
+               else
+               {
+                   event.player.message("Something has gone very wrong, aborting action!");
+                   log("[ERR!] Tried to delete node '" + aboutNode.Name + "' but it had no valid type!");
+                   break;
+               }
+               for(var i = 0; i < referencedBy.length; i++)
+               {
+                    var currentNode = referencedBy[i];
+                    // [Name, City]
+                    if(currentNode[1])
+                    {
+                        // Is a Location OR a Gate
+                        if(registry.Cities[currentNode[1]].Locations.hasOwnProperty(currentNode[0]))
+                        {
+                            // Is a Location
+                            var refNeighbours = registry.Cities[currentNode[1]].Locations[currentNode[0]].Neighbours;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                // [Name, distance, City]
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
+                                {
+                                    delete refNeighbours[j];
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Is a Gate
+                            var refNeighbours = registry.Cities[currentNode[1]].Gates[currentNode[0]].Neighbours;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
+                                {
+                                    delete refNeighbours[j];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Is a node
+                        var refNeighbours = registry.Nodes[currentNode[0]].Neighbours;
+                        for(var j = 0; j < refNeighbours.length; j++)
+                        {
+                            if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][2] == aboutNode.City)
+                            {
+                                delete refNeighbours[j];
+                                break;
+                            }
+                        }
+                    }
+               }
+               // #2 Now remove all the Ref entries in neighbours of this node
+               if(aboutNode.Type == "Node")
+               {
+                    var neighbourList = registry.Nodes[aboutNode.Name].Neighbours;
+               }
+               else if(aboutNode.Type == "Location")
+               {
+                    var neighbourList = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Neighbours;
+               }
+               else if(aboutNode.Type == "Gate")
+               {
+                    var neighbourList = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Neighbours;
+               }
+               else
+               {
+                   event.player.message("Something has gone very wrong, aborting action!");
+                   log("[ERR!] Tried to save name for node '" + aboutNode.Name + "' but it failed a check it previously passed! This is probably because I forgot to add a new node type to the list of checks in #2.");
+                   break;
+               }
+
+               for(var i = 0; i < neighbourList.length; i++)
+               {
+                    var currentNode = neighbourList[i];
+                    // [Name, Distance, City]
+                    if(currentNode[2])
+                    {
+                        // Is a Location OR a Gate
+                        if(registry.Cities[currentNode[2]].Locations.hasOwnProperty(currentNode[0]))
+                        {
+                            // Is a Location
+                            var refNeighbours = registry.Cities[currentNode[2]].Locations[currentNode[0]].Refs;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                // [Name, City]
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                                {
+                                    delete refNeighbours[j];
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Is a Gate
+                            var refNeighbours = registry.Cities[currentNode[2]].Gates[currentNode[0]].Refs;
+                            for(var j = 0; j < refNeighbours.length; j++)
+                            {
+                                if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                                {
+                                    delete refNeighbours[j];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Is a node
+                        var refNeighbours = registry.Nodes[currentNode[0]].Refs;
+                        for(var j = 0; j < refNeighbours.length; j++)
+                        {
+                            if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                            {
+                                delete refNeighbours[j];
+                                break;
+                            }
+                        }
+                    }
+               }
+               // #3 remove node registry entry for this node
+               if(aboutNode.Type == "Node")
+               {
+                    delete registry.Nodes[aboutNode.Name]; // Remove old data and old key
+               }
+               else if(aboutNode.Type == "Location")
+               {
+                    delete registry.Cities[aboutNode.City].Locations[aboutNode.Name];
+               }
+               else if(aboutNode.Type == "Gate")
+               {
+                delete registry.Cities[aboutNode.City].Gates[aboutNode.Name];
+               }
+               else
+               {
+                   event.player.message("Something has gone very wrong, aborting action!");
+                   log("[ERR!] Tried to delete node '" + aboutNode.Name + "' but it failed a check it previously passed! This is probably because I forgot to add a new node type to the list of checks in #3.");
+                   break;
+                }
+
+                // Save registry
+                event.player.world.getStoreddata().put("NodeRegistry", JSON.stringify(registry)); // Save the registry to storeddata
+
+                // Save to file?
+                if(tool.getTempdata().get("settings").autoUpdateFile)
+                {
+                    var registryFile = new File("saves/" + event.player.world.getName() + "/Roads/Node Registry.json");
+                    Files.write(registryFile.toPath(), JSON.stringify(registry).getBytes());
+                }
+
+                // Finally; Delete the physical block and close gui
+                block.setBlock("minecraft:air");
+                event.player.closeGui();
             }
-            else if(event.gui.getID() === GUI.E_DeleteNeighbourConfirmation)
+            else if(event.gui.getID() === GUI.E_DeleteNeighbourConfirmation) // TODO removes neighbour
             {
-
+                event.player.message("Delete Node neighbour confirmation recived!");
             }
             break;
-        case GUI.E_BCancel: // TODO Does not delete node, closes prompt and brings back the gui
+        case GUI.E_BCancel:
+            if(event.gui.getID() === GUI.E_DeleteNodeConfirmation) // Does not delete node, closes prompt and brings back the gui
+            {
+                var tool = event.player.getMainhandItem();
+                var aboutNode = tool.getTempdata().get("Focussed Node");
+                var registry = event.player.world.getTempdata().get("NodeRegistry");
+                if(aboutNode.Type == "Node")
+                {
+                    var pos = registry.Nodes[aboutNode.Name].Pos;
+                }
+                else if(aboutNode.Type == "Location")
+                {
+                    var pos = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Pos;
+                }
+                else if(aboutNode.Type == "Gate")
+                {
+                    var pos = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Pos;
+                }
+                else
+                {
+                    event.player.message("Something has gone very wrong, aborting action!");
+                    log("[ERR!] Tried to return to editing for node '" + aboutNode.Name + "' after cancelling delete but it had no valid type! This may be because I added a new node type and forgot to add it here.");
+                    break;
+                }
+                var Pos = event.player.world.getBlock(pos[0], pos[1], pos[2]).getPos();
+                openEditGUI(event,Pos);
+            }
+            else if(event.gui.getID() === GUI.E_DeleteNeighbourConfirmation) // return to edit neighbour
+            {
+                event.player.message("Cancel delete Node neighbour recived!");
+                var tool = event.player.getMainhandItem();
+                var aboutNode = tool.getTempdata().get("Focussed Node");
+                var registry = event.player.world.getTempdata().get("NodeRegistry");
+                if(aboutNode.Type == "Node")
+                {
+                    var pos = registry.Nodes[aboutNode.Name].Pos;
+                }
+                else if(aboutNode.Type == "Location")
+                {
+                    var pos = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Pos;
+                }
+                else if(aboutNode.Type == "Gate")
+                {
+                    var pos = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Pos;
+                }
+                else
+                {
+                    event.player.message("Something has gone very wrong, aborting action!");
+                    log("[ERR!] Tried to return to editing for node '" + aboutNode.Name + "' after cancelling delete but it had no valid type! This may be because I added a new node type and forgot to add it here.");
+                    break;
+                }
+                var Pos = event.player.world.getBlock(pos[0], pos[1], pos[2]).getPos();
+                openEditNeighbourGUI(event,Pos);
+            }    
             break;
-        case GUI.EN_BRemoveNeighbour: // TODO Removes the neighbour, maybe a confirmation prompt?
+        case GUI.EN_BRemoveNeighbour: // Opens prompt to delete a neighbour
+            var confirmGui = event.API.createCustomGui(GUI.E_DeleteNeighbourConfirmation, 256, 80, true);
+            confirmGui.setBackgroundTexture("customnpcs:textures/gui/bgfilled.png");
+            confirmGui.addLabel(GUI.E_LTitle, "ARE YOU SURE?", 90, 15, 150, 10, 16711680);
+            confirmGui.addLabel(GUI.E_LSubtitle, "This action will remove this neighbour of the selected node, it will not remove this node as a neighbour if it is one. You can re-add this as a neighbour at any point.", 10, 20, 236, 40);
+            confirmGui.addButton(GUI.E_BCancel, "Cancel", 10, 60, 50, 20);
+            confirmGui.addButton(GUI.E_BConfirm, "Confirm", 196, 60, 50, 20);
+
+            event.player.showCustomGui(confirmGui);
             break;
-        case GUI.EN_BBack: // TODO Returns to the Edit Gui
+        case GUI.EN_BBack: // Returns to the Edit Gui
+            var tool = event.player.getMainhandItem();
+            var aboutNode = tool.getTempdata().get("Focussed Node");
+            var registry = event.player.world.getTempdata().get("NodeRegistry");
+            if(aboutNode.Type == "Node")
+            {
+                var pos = registry.Nodes[aboutNode.Name].Pos;
+            }
+            else if(aboutNode.Type == "Location")
+            {
+                var pos = registry.Cities[aboutNode.City].Locations[aboutNode.Name].Pos;
+            }
+            else if(aboutNode.Type == "Gate")
+            {
+                var pos = registry.Cities[aboutNode.City].Gates[aboutNode.Name].Pos;
+            }
+            else
+            {
+                event.player.message("Something has gone very wrong, aborting action!");
+                log("[ERR!] Tried to return to editing for node '" + aboutNode.Name + "' but it had no valid type! This may be because I added a new node type and forgot to add it here.");
+                break;
+            }
+            var Pos = event.player.world.getBlock(pos[0], pos[1], pos[2]).getPos();
+            openEditGUI(event,Pos);
             break;
     }
     
@@ -1462,6 +1882,8 @@ function customGuiScroll(event)
             event.gui.getComponent(GUI.E_FCity).setText(event.selection[0]);
             event.gui.update(event.player);
             break;
+        case GUI.EN_SNeighbourList: // TODO selects neighbour
+            break;
     }
 }
 
@@ -1473,4 +1895,24 @@ function enumerate(List, StartVal) // got tired of adding everything manually
         enumeratedObject[List[i]] = i + StartVal;
     }
     return enumeratedObject;
+}
+
+function drawLine(world, pos1, pos2, resolution, particle, colour)
+{
+    var resolution = resolution || 1; // Draw 1 particle per block
+    var particle = particle || "endRod"; // Particle Id
+    var colour = colour || 0; // Colour if particle needs a colour
+    var NpcAPI = Java.type("noppes.npcs.api.NpcAPI").Instance();
+    
+    var drawAmount = Math.ceil(pos1.distanceTo(pos2))*resolution;
+
+    var subs = pos2.subtract(pos1);
+    for(var i = 0; i < drawAmount; i++) // Draw all particles
+    {
+        var x = (pos1.getX() + subs.getX()*(i/drawAmount)+0.5).toFixed(4);
+        var y = (pos1.getY() + subs.getY()*(i/drawAmount)+0.5).toFixed(4);
+        var z = (pos1.getZ() + subs.getZ()*(i/drawAmount)+0.5).toFixed(4);
+        var cords =  x + " " + y + " " + z;
+        var output = NpcAPI.executeCommand(world, "particle " + particle + " "+ cords + " 0 0 0 0 1 force @a " + colour);
+    }
 }
