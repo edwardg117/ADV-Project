@@ -4,7 +4,6 @@ Road maker tool v0.43 by edwardg
 Aids in the creation of a road network by letting you select points on the ground by left clicking them
 
 Stuff left to do:
-- Remove neighbour functionality [High priority]
 - Edit script adding to include scripts [Have to make those scripts first]
 - Error/Input checking [Low priority, I don't want to do it ;(]
 - Update description [Low]
@@ -1746,7 +1745,7 @@ function customGuiButton(event)
                 block.setBlock("minecraft:air");
                 event.player.closeGui();
             }
-            else if(event.gui.getID() === GUI.E_DeleteNeighbourConfirmation) // TODO removes neighbour
+            else if(event.gui.getID() === GUI.E_DeleteNeighbourConfirmation) // removes neighbour
             {
                 event.player.message("Delete Node neighbour confirmation recived!");
                 /*
@@ -1755,6 +1754,63 @@ function customGuiButton(event)
                     3. Save registry
                     4. Write to file if enabled
                     */
+                var tool = event.player.getMainhandItem();
+                var aboutNode = tool.getTempdata().get("Focussed Node");
+                // #1 Remove this node as a reference
+                var registry = event.player.world.getTempdata().get("NodeRegistry");
+
+                var neighbour = tool.getTempdata().get("Focussed Neighbour");
+                var refNeighbours = neighbour.Refs;
+                for(var j = 0; j < refNeighbours.length; j++)
+                {
+                    // [Name, City]
+                    if(refNeighbours[j][0] == aboutNode.Name && refNeighbours[j][1] == aboutNode.City)
+                    {
+                        refNeighbours.splice(j,1);
+                        break;
+                    }
+                }
+                // #2 Remove the neighbour entry for the node
+                if(aboutNode.Type == "Node")
+                {
+                    var node = registry.Nodes[aboutNode.Name];
+                }
+                else if(aboutNode.Type == "Location")
+                {
+                    var node = registry.Cities[aboutNode.City].Locations[aboutNode.Name];
+                }
+                else if(aboutNode.Type == "Gate")
+                {
+                    var node = registry.Cities[aboutNode.City].Gates[aboutNode.Name];
+                }
+                else
+                {
+                    event.player.message("Something has gone very wrong, aborting action!");
+                    log("[ERR!] Tried to remove neighbour '" + neighbour.Name + "' from node '" + aboutNode.Name + "' but it had no valid type!");
+                    break;
+                }
+                var nodeNeighbours = node.Neighbours;
+                var neighbourInfo = tool.getTempdata().get("Focussed Neighbour info");
+                for(var i = 0; i < nodeNeighbours.length; i++)
+                {// [Name, Dist, City]
+                    if(nodeNeighbours[i][0] == neighbourInfo.Name && nodeNeighbours[i][2] == neighbourInfo.City)
+                    {
+                        nodeNeighbours.splice(i,1);
+                        break;
+                    }
+                }
+                // #3 save
+                event.player.world.getStoreddata().put("NodeRegistry", JSON.stringify(registry)); // Save the registry to storeddata
+                // #4 If autowritye, do it
+                if(tool.getTempdata().get("settings").autoUpdateFile)
+                {
+                    var registryFile = new File("saves/" + event.player.world.getName() + "/Roads/Node Registry.json");
+                    Files.write(registryFile.toPath(), JSON.stringify(registry).getBytes());
+                }
+                var pos = node.Pos;
+                var Pos = event.player.world.getBlock(pos[0], pos[1], pos[2]).getPos();
+                openEditNeighbourGUI(event,Pos);
+                event.player.message("Neighbour removed!");
             }
             break;
         case GUI.E_BCancel:
@@ -1950,6 +2006,7 @@ function customGuiScroll(event)
                 gui.addButton(GUI.EN_BRemoveNeighbour, "Remove Neighbour", 120, 120, 120, 20);
 
                 tool.getTempdata().put("Focussed Neighbour", neighbour);
+                tool.getTempdata().put("Focussed Neighbour info", {"Name":neighbourName,"City":neighbourCity});
                 gui.update(event.player);
             break;
     }
