@@ -1,3 +1,5 @@
+## I have abandoned this project and will likely not contribue to it further.
+
 # ADV-Project
 A repository to house the scripts and others for the ADV Project
 
